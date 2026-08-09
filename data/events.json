@@ -1,0 +1,33 @@
+{
+  "_comment": "Source of truth for gigs until the Google Calendar exists. Once it does, a build step will fetch the calendar's public .ics and regenerate this file — the shape below is what the page consumes, so nothing else has to change.",
+  "_schema": {
+    "start": "ISO 8601 with timezone, e.g. 2026-09-12T19:30:00-04:00",
+    "end": "optional, same format",
+    "title": "what to call the gig",
+    "venue": "venue name",
+    "locality": "City, ST",
+    "address": "optional street address, improves the map/rich result",
+    "url": "optional — tickets or event page; renders a Details button",
+    "free": "optional boolean",
+    "note": "optional short line, e.g. 'Quintet' or 'Dance lesson at 7:30'"
+  },
+  "events": [
+    {
+      "start": "2026-09-12T19:30:00-04:00",
+      "end": "2026-09-12T22:30:00-04:00",
+      "title": "Speakeasy Night",
+      "venue": "Woodrow Wilson House",
+      "locality": "Washington, DC",
+      "url": "https://fbwstompers.com/events/",
+      "note": "Septet · dance lesson at 7:00"
+    },
+    {
+      "start": "2026-10-04T14:00:00-04:00",
+      "title": "Torpedo Factory Art Center",
+      "venue": "Torpedo Factory Art Center",
+      "locality": "Alexandria, VA",
+      "free": true,
+      "note": "Quintet"
+    }
+  ]
+}

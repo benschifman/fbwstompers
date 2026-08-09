@@ -1,0 +1,46 @@
+{
+  "@type": "MusicGroup",
+  "@id": "https://fbwstompers.com/#band",
+  "name": "Foggy Bottom Whomp-Stompers",
+  "alternateName": "Foggy Bottom Whomp-Stompers Jazz Band",
+  "genre": [
+    "Traditional jazz",
+    "Dixieland",
+    "Hot jazz",
+    "1920s jazz"
+  ],
+  "url": "https://fbwstompers.com/",
+  "image": "https://fbwstompers.com/assets/img/hero-dance-1600.jpg",
+  "email": "hello@fbwstompers.com",
+  "foundingDate": "2015",
+  "description": "Washington, DC area prohibition-era jazz band playing dance music from the 1920s and 1930s.",
+  "areaServed": [
+    {
+      "@type": "State",
+      "name": "District of Columbia"
+    },
+    {
+      "@type": "State",
+      "name": "Maryland"
+    },
+    {
+      "@type": "State",
+      "name": "Virginia"
+    }
+  ],
+  "location": {
+    "@type": "Place",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Washington",
+      "addressRegion": "DC",
+      "addressCountry": "US"
+    }
+  },
+  "sameAs": [
+    "https://www.facebook.com/WhompStompers/",
+    "https://www.instagram.com/fbwstompers/",
+    "https://www.youtube.com/channel/UCunpgXsQ25p9Q_ddMeYkHrg",
+    "https://twitter.com/fbwstompers"
+  ]
+}

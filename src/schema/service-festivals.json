@@ -1,0 +1,15 @@
+{
+  "@type": "Service",
+  "@id": "https://fbwstompers.com/services/festivals/#service",
+  "name": "Festival and public event jazz band",
+  "serviceType": "Live festival and public event music",
+  "description": "A live 1920s jazz band for festivals and public events in Washington DC, Maryland, Virginia and Pennsylvania — a lineup scaled from trio to octet, with its own PA system, for festival stages and public-sector bookings.",
+  "provider": { "@id": "https://fbwstompers.com/#band" },
+  "areaServed": [
+    { "@type": "State", "name": "District of Columbia" },
+    { "@type": "State", "name": "Maryland" },
+    { "@type": "State", "name": "Virginia" },
+    { "@type": "State", "name": "Pennsylvania" }
+  ],
+  "url": "https://fbwstompers.com/services/festivals/"
+}

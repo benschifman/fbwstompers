@@ -1,0 +1,14 @@
+{
+  "@type": "Service",
+  "@id": "https://fbwstompers.com/services/dances/#service",
+  "name": "Dance jazz band",
+  "serviceType": "Live music for dance nights",
+  "description": "A live 1920s jazz band for dance nights in Washington DC, Maryland and Virginia—music written to be danced to, with lessons, demonstrations and burlesque available through partner dance teachers.",
+  "provider": { "@id": "https://fbwstompers.com/#band" },
+  "areaServed": [
+    { "@type": "State", "name": "District of Columbia" },
+    { "@type": "State", "name": "Maryland" },
+    { "@type": "State", "name": "Virginia" }
+  ],
+  "url": "https://fbwstompers.com/services/dances/"
+}

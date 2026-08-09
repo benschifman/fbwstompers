@@ -1,0 +1,7 @@
+{
+  "@type": "ContactPage",
+  "@id": "https://fbwstompers.com/contact/#page",
+  "url": "https://fbwstompers.com/contact/",
+  "name": "Contact the Foggy Bottom Whomp-Stompers",
+  "mainEntity": { "@id": "https://fbwstompers.com/#band" }
+}

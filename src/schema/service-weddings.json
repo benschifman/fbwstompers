@@ -1,0 +1,14 @@
+{
+  "@type": "Service",
+  "@id": "https://fbwstompers.com/services/weddings/#service",
+  "name": "Wedding jazz band",
+  "serviceType": "Live wedding music",
+  "description": "A live 1920s jazz band for weddings in Washington DC, Maryland and Virginia — ceremony, cocktail hour, first dance and dancing, with PA system and MC included.",
+  "provider": { "@id": "https://fbwstompers.com/#band" },
+  "areaServed": [
+    { "@type": "State", "name": "District of Columbia" },
+    { "@type": "State", "name": "Maryland" },
+    { "@type": "State", "name": "Virginia" }
+  ],
+  "url": "https://fbwstompers.com/services/weddings/"
+}

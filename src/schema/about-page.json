@@ -1,0 +1,8 @@
+{
+  "@type": "AboutPage",
+  "@id": "https://fbwstompers.com/about/#page",
+  "url": "https://fbwstompers.com/about/",
+  "name": "About the Foggy Bottom Whomp-Stompers",
+  "description": "Formed in 2015, the Foggy Bottom Whomp-Stompers play 1920s and 1930s jazz across the Washington, DC region.",
+  "mainEntity": { "@id": "https://fbwstompers.com/#band" }
+}

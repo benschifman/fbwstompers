@@ -1,0 +1,15 @@
+{
+  "@type": "Service",
+  "@id": "https://fbwstompers.com/services/send-offs/#service",
+  "name": "Send-off jazz band",
+  "serviceType": "New Orleans-style jazz for funerals and celebrations of life",
+  "description": "A New Orleans-style jazz band for a celebration of life, playing in Washington DC, Maryland, Virginia and Pennsylvania.",
+  "provider": { "@id": "https://fbwstompers.com/#band" },
+  "areaServed": [
+    { "@type": "State", "name": "District of Columbia" },
+    { "@type": "State", "name": "Maryland" },
+    { "@type": "State", "name": "Virginia" },
+    { "@type": "State", "name": "Pennsylvania" }
+  ],
+  "url": "https://fbwstompers.com/services/send-offs/"
+}

@@ -1,0 +1,102 @@
+{
+  "hero-dance": {
+    "src": "IMG_5036-scaled.jpg",
+    "w": 1920,
+    "h": 1440,
+    "sizes": [
+      640,
+      1024,
+      1600
+    ]
+  },
+  "party-rooftop": {
+    "src": "IMG_5252-scaled.jpg",
+    "w": 1920,
+    "h": 1440,
+    "sizes": [
+      640,
+      1024,
+      1600
+    ]
+  },
+  "dance-outdoor": {
+    "src": "tweed_ride_mid-point_IMG_3942-scaled.jpg",
+    "w": 1920,
+    "h": 1440,
+    "sizes": [
+      640,
+      1024,
+      1600
+    ]
+  },
+  "wedding": {
+    "src": "fbws-wedding.jpg",
+    "w": 1024,
+    "h": 768,
+    "sizes": [
+      640,
+      1024
+    ]
+  },
+  "band-portrait": {
+    "src": "a4afd58b0ce35183060ad4cc60c70059-e1562449883211.jpg",
+    "w": 226,
+    "h": 300,
+    "sizes": [
+      640
+    ]
+  },
+  "config-core": {
+    "src": "core.jpg",
+    "w": 1352,
+    "h": 954,
+    "sizes": [
+      640,
+      1024
+    ]
+  },
+  "config-full": {
+    "src": "more.jpg",
+    "w": 1741,
+    "h": 948,
+    "sizes": [
+      640,
+      1024,
+      1600
+    ]
+  },
+  "cta-poster": {
+    "src": "yt-maxresdefault.jpg",
+    "w": 1280,
+    "h": 720,
+    "sizes": [
+      640,
+      1024
+    ]
+  },
+  "sheet-dreams": {
+    "src": "10da7763d02ae307933253f30220dffc.jpg",
+    "w": 460,
+    "h": 640,
+    "sizes": [
+      640
+    ]
+  },
+  "sheet-blackbird": {
+    "src": "f0134747ed04d776513a56f86df1bef7.jpg",
+    "w": 414,
+    "h": 500,
+    "sizes": [
+      640
+    ]
+  },
+  "page-head-bg": {
+    "src": "pexels-floral-12787690.jpg",
+    "w": 5175,
+    "h": 3523,
+    "sizes": [
+      900,
+      1800
+    ]
+  }
+}

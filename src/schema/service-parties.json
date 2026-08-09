@@ -1,0 +1,14 @@
+{
+  "@type": "Service",
+  "@id": "https://fbwstompers.com/services/parties/#service",
+  "name": "Party jazz band",
+  "serviceType": "Live party music",
+  "description": "A live 1920s jazz band for themed birthdays and private parties in Washington DC, Maryland and Virginia — a band sized to your space, with our own sound system included.",
+  "provider": { "@id": "https://fbwstompers.com/#band" },
+  "areaServed": [
+    { "@type": "State", "name": "District of Columbia" },
+    { "@type": "State", "name": "Maryland" },
+    { "@type": "State", "name": "Virginia" }
+  ],
+  "url": "https://fbwstompers.com/services/parties/"
+}

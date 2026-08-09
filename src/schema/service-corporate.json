@@ -1,0 +1,14 @@
+{
+  "@type": "Service",
+  "@id": "https://fbwstompers.com/services/corporate/#service",
+  "name": "Corporate event jazz band",
+  "serviceType": "Live corporate event music",
+  "description": "A live 1920s jazz band for corporate events in Washington DC, Maryland and Virginia — retreats, holiday parties and dinners, sized to the event with PA system and MC included.",
+  "provider": { "@id": "https://fbwstompers.com/#band" },
+  "areaServed": [
+    { "@type": "State", "name": "District of Columbia" },
+    { "@type": "State", "name": "Maryland" },
+    { "@type": "State", "name": "Virginia" }
+  ],
+  "url": "https://fbwstompers.com/services/corporate/"
+}

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="60" viewBox="0 0 120 60">
+  <!-- Seamless art-deco fan/scallop tile. Radius is half the tile width, so
+       fans meet edge-to-edge when repeated. Stroke is the brand gold. -->
+  <g fill="none" stroke="#a78b49" stroke-width="1.1" stroke-linecap="round">
+    <path d="M0 60 A60 60 0 0 1 120 60"/>
+    <path d="M15 60 A45 45 0 0 1 105 60"/>
+    <path d="M30 60 A30 30 0 0 1 90 60"/>
+    <path d="M45 60 A15 15 0 0 1 75 60"/>
+    <path d="M60 60 V44"/>
+  </g>
+</svg>
