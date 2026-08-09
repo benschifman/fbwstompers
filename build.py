@@ -191,6 +191,7 @@ def build() -> None:
         for n in seo_notes:
             print(f"    {n}")
 
+    check_unprocessed_images()
     check_links(seen_urls)
     write_sitemap(seen_urls)
     (DIST / "robots.txt").write_text(
@@ -202,6 +203,55 @@ def build() -> None:
 
     total = sum(f.stat().st_size for f in DIST.rglob("*") if f.is_file())
     print(f"\n  {len(pages)} pages -> dist/  ({total/1024/1024:.1f} MB)")
+
+
+def check_unprocessed_images() -> None:
+    """Flag originals that have no generated variants.
+
+    The likely mistake when adding a photo is dropping it into
+    assets/img/orig/ and forgetting to run `python3 _source/images.py`. The
+    original alone is useless — pages reference the generated sizes — so the
+    photo would simply never appear. Nothing else catches this, because the
+    page markup that would reference it hasn't been written yet either.
+    """
+    orig = ROOT / "assets" / "img" / "orig"
+    out = ROOT / "assets" / "img"
+    if not orig.is_dir():
+        return
+
+    # Mirrors SKIP in _source/images.py — originals deliberately left raw.
+    skip = {"cropped-android-chrome-512x512-1-1-192x192.png"}
+    exts = {".jpg", ".jpeg", ".png", ".webp"}
+
+    generated = {f.name for f in out.glob("*-*.webp")}
+    unprocessed = []
+    for f in sorted(orig.iterdir()):
+        if f.name.startswith(".") or f.name in skip or f.suffix.lower() not in exts:
+            continue
+        # An original is "processed" if any file named <something>-<width>.webp
+        # exists whose stem could plausibly derive from it. Cheapest reliable
+        # signal: at least one generated file shares the slugified stem, OR the
+        # original is listed in the rename table used by the image script.
+        slug = re.sub(r"[^a-z0-9]+", "-", f.stem.lower()).strip("-")
+        if any(g.startswith(slug + "-") for g in generated):
+            continue
+        if _is_renamed_original(f.name):
+            continue
+        unprocessed.append(f.name)
+
+    if unprocessed:
+        print("\n  Photos added but not processed yet:")
+        for name in unprocessed:
+            print(f"    {name}")
+        print("    -> run: python3 _source/images.py")
+
+
+def _is_renamed_original(filename: str) -> bool:
+    """True if _source/images.py maps this original to a different output name."""
+    script = ROOT / "_source" / "images.py"
+    if not script.exists():
+        return False
+    return f"'{filename}'" in script.read_text()
 
 
 def check_links(page_urls: dict) -> None:

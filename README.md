@@ -30,13 +30,14 @@ assets/
   js/main.js            Progressive enhancement only — pages work without it
   fonts/                Self-hosted Limelight + Jost, latin subset (91 KB)
   img/                  Responsive webp + jpg at 640/1024/1600
-  img/orig/             Untouched originals. Not deployed.
+  img/orig/             Untouched originals. Committed, not deployed.
 data/events.json        Gig data — see "Events" below
 dist/                   Generated output. Gitignored.
 _source/                Reference only. Not deployed.
   pages/*.json          Raw page content from the live WP REST API
   text/*.md             Readable copy extracted from those pages
   images.py             Regenerates assets/img from assets/img/orig
+                        (auto-discovers — see "Adding a photo")
 ```
 
 ## Adding a page
@@ -78,6 +79,46 @@ Optional keys: `og_title`, `og_description`, `og_image`, `og_image_alt`,
   unbuilt pages show up as a to-do list rather than silent 404s
 
 It also writes `sitemap.xml` and `robots.txt` from the page list.
+
+## Adding a photo
+
+Two steps:
+
+```bash
+# 1. put the photo in assets/img/orig/  (any filename — spaces and capitals are fine)
+# 2. generate the responsive sizes
+python3 _source/images.py
+```
+
+The output name comes from the filename, slugified: `Tented Reception 2026.jpg`
+becomes `tented-reception-2026-640.webp`, `-1024.webp`, `-1600.webp` and matching
+`.jpg` fallbacks. **There is no list to update** — every image in `orig/` is
+discovered automatically. The `RENAME` table in `_source/images.py` exists only
+to give better names to legacy files like `IMG_5036-scaled.jpg`.
+
+Then reference it in a page with a `<picture>` block (copy the shape from any
+existing page) and commit **both** the original and the generated variants.
+
+### Why originals are committed
+
+`assets/img/orig/` is in git. Cloudflare rebuilds `dist/` from scratch on every
+push, so anything not in git doesn't exist in production — and keeping the
+originals means the variants can always be regenerated from source, at
+different sizes or quality, without hunting for the master files.
+
+### Three guards against the common mistakes
+
+- **Photo added but not processed.** The build lists any original in `orig/`
+  with no generated variants, and prints the command to fix it. Nothing else
+  catches this, because the page markup referencing it usually doesn't exist yet.
+- **Page references an image that doesn't exist.** The build *fails*, checking
+  `srcset` candidates as well as `src`. This caught a real bug — a page pointing
+  at `band-live-*.jpg`, a filename that was never generated.
+- **Two photos producing the same output name.** `_source/images.py` stops with
+  an error rather than letting one silently overwrite the other's variants.
+
+Regeneration is deterministic: re-running the script on unchanged sources
+produces byte-identical files, so it never creates noise in `git status`.
 
 ## Design
 

@@ -1,9 +1,31 @@
+"""Generate responsive image variants.
+
+    python3 _source/images.py
+
+TO ADD A PHOTO: drop it in assets/img/orig/ and run this script. That's it —
+there is no list to update. Every image in orig/ is picked up automatically and
+its output name comes from its filename, so `tented-reception.jpg` becomes
+`tented-reception-640.webp`, `-1024.webp`, and so on.
+
+The tables below are only overrides for the handful of legacy files whose
+original names were unusable (`IMG_5036-scaled.jpg`) or that need special
+treatment. New photos normally need no entry anywhere.
+"""
+
 from PIL import Image, ImageOps
-import os, json
+import os, re, json
 
 SRC = 'assets/img/orig'
 OUT = 'assets/img'
 WIDTHS = [640, 1024, 1600]
+EXTS = {'.jpg', '.jpeg', '.png', '.webp'}
+
+# Originals that must NOT go through the pipeline.
+SKIP = {
+    # Source for assets/img/favicon-192.png, which is placed by hand at its
+    # exact final size — resizing it would be meaningless.
+    'cropped-android-chrome-512x512-1-1-192x192.png',
+}
 
 # Sources that need a rotation before entering the normal pipeline.
 # Positive = counter-clockwise (PIL convention), matches Image.rotate().
@@ -26,7 +48,8 @@ CUSTOM_WIDTHS = {
 # weight out of dist/ instead of shipping files nothing links to.
 WEBP_ONLY = {'page-head-bg'}
 
-# source file -> friendly name
+# Overrides only, for originals whose own filename makes a poor output name.
+# A new photo does NOT need an entry here — see the module docstring.
 RENAME = {
     # real performance photos
     'IMG_5036-scaled.jpg':                       'hero-dance',      # packed indoor dance floor
@@ -50,11 +73,36 @@ RENAME = {
     'pexels-floral-12787690.jpg':                'page-head-bg',
 }
 
+def slugify(stem: str) -> str:
+    """Filename stem -> safe output name. 'Tented Reception (2).JPG' -> 'tented-reception-2'."""
+    s = re.sub(r'[^a-z0-9]+', '-', stem.lower()).strip('-')
+    return s or 'image'
+
+
+def discover():
+    """Every original in orig/, paired with the name its variants will use."""
+    for fn in sorted(os.listdir(SRC)):
+        if fn.startswith('.') or fn in SKIP:
+            continue
+        stem, ext = os.path.splitext(fn)
+        if ext.lower() not in EXTS:
+            continue
+        yield fn, RENAME.get(fn, slugify(stem))
+
+
 manifest = {}
-for fn, name in RENAME.items():
+seen_names: dict[str, str] = {}
+for fn, name in discover():
+    # Two originals resolving to the same output name would silently overwrite
+    # each other's variants, so fail loudly instead.
+    if name in seen_names:
+        raise SystemExit(
+            f"name collision: '{fn}' and '{seen_names[name]}' both produce '{name}'.\n"
+            f"Rename one of the files in {SRC}/, or add a RENAME override."
+        )
+    seen_names[name] = fn
+
     p = os.path.join(SRC, fn)
-    if not os.path.exists(p):
-        print('MISSING', fn); continue
     im = ImageOps.exif_transpose(Image.open(p)).convert('RGB')
     if fn in ROTATE:
         im = im.rotate(ROTATE[fn], expand=True)
