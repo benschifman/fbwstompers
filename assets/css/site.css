@@ -1130,6 +1130,23 @@ a:hover { color: var(--gold-bright); }
 }
 .footer-grid ul { list-style: none; margin: 0; padding: 0; }
 .footer-grid li + li { margin-top: 0.55rem; }
+
+/* Sitemap runs in two columns so the footer isn't twice as tall as it needs
+   to be. Spacing switches from the sibling margin above to symmetric padding:
+   under CSS columns the first item of column two is still an `li + li`
+   sibling, so a top margin would push that column down out of line with the
+   first. The negative margin cancels the new leading padding so the list
+   still starts flush under its heading. */
+.footer-sitemap {
+  columns: 2;
+  column-gap: var(--space-m);
+  margin-top: -0.275rem;
+}
+.footer-sitemap li {
+  break-inside: avoid;
+  padding-block: 0.275rem;
+}
+.footer-sitemap li + li { margin-top: 0; }
 .footer-grid a { color: var(--muted); text-decoration: none; }
 .footer-grid a:hover { color: var(--gold); }
 .footer-grid p { color: var(--muted); }
