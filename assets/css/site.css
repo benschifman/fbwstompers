@@ -1129,7 +1129,14 @@ a:hover { color: var(--gold-bright); }
   margin-bottom: var(--space-s);
 }
 .footer-grid ul { list-style: none; margin: 0; padding: 0; }
-.footer-grid li + li { margin-top: 0.55rem; }
+
+/* No blanket `li + li { margin-top }` here. The footer holds exactly two
+   lists, and neither wants it: .footer-sitemap spaces itself with padding so
+   its two columns line up, and .social is a horizontal row where a top margin
+   is meaningless. It used to exist, and it silently applied to .social —
+   pushing every icon except the first (which `li + li` can't match) down by
+   8.8px and stretching the row to 47.2px. That read as "the Facebook icon is
+   too high" when in fact the other three were too low. */
 
 /* Sitemap runs in two columns so the footer isn't twice as tall as it needs
    to be. Spacing switches from the sibling margin above to symmetric padding:
@@ -1146,12 +1153,16 @@ a:hover { color: var(--gold-bright); }
   break-inside: avoid;
   padding-block: 0.275rem;
 }
-.footer-sitemap li + li { margin-top: 0; }
 .footer-grid a { color: var(--muted); text-decoration: none; }
 .footer-grid a:hover { color: var(--gold); }
 .footer-grid p { color: var(--muted); }
 
-.social { display: flex; gap: var(--space-xs); list-style: none; margin: 0 0 var(--space-s); padding: 0; }
+/* align-items: center is a guard, not decoration. If anything ever makes one
+   <li> taller than its siblings — a stray margin, an HTML comment inside the
+   grid-display <a> (which splits the whitespace into two text runs and adds a
+   line box) — centring keeps every circle on the same line instead of letting
+   one drift. Both of those have bitten this row already. */
+.social { display: flex; align-items: center; gap: var(--space-xs); list-style: none; margin: 0 0 var(--space-s); padding: 0; }
 .social a {
   display: grid;
   place-items: center;

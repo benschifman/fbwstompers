@@ -36,7 +36,7 @@ SRC = ROOT / "src"
 DIST = ROOT / "dist"
 
 SITE_URL = "https://fbwstompers.com"
-ASSET_V = "10"         # bump to bust caches on deploy
+ASSET_V = "13"         # bump to bust caches on deploy
 COPY = ["assets", "data"]
 SKIP_DIRS = {"orig"}   # untouched originals stay out of the deploy
 
