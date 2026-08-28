@@ -70,27 +70,69 @@ paid hosting because Contact/Booking both intake through an embedded Google
 Form, so email carries very little load.
 
 DNS records for this are Cloudflare-managed (padlocked): MX to
-`route1/2/3.mx.cloudflare.net`, SPF `v=spf1 include:_spf.mx.cloudflare.net ~all`,
-DKIM at `cf2024-1._domainkey`. Enabling it does **not** remove the old provider's
-records — the three SiteGround `mx*.antispam.mailspamprotection.com` MX records
-and the old SPF had to be deleted by hand, or the two sets compete. A leftover
-`_domainkey` TXT (`"v=DKIM1; o=~"`) is harmless; different selector, no conflict.
+`route1/2/3.mx.cloudflare.net` and DKIM at `cf2024-1._domainkey`. The SPF record
+is hand-edited — see the block below, it needs Google added. Enabling Email
+Routing does **not** remove the old provider's records: the three SiteGround
+`mx*.antispam.mailspamprotection.com` MX records and the old SPF had to be
+deleted by hand, or the two sets compete.
 
 Known limitation: sending through Gmail's servers on a non-Gmail domain means
 headers show the Gmail origin and some recipients see "via gmail.com". Fine at
 this volume; it does rule out a strict DMARC policy later without moving to a
 real mailbox (~$12/yr, Zoho Mail Lite or Namecheap Private Email).
 
-## SiteGround is still live until Aug 25, 2026
+### The send-as trap — cost an hour on Aug 9
 
-Auto-renew is **off** (was $215.88/yr). The account stays up until then, which
-is the window for retrieving anything still on it.
+`hello@fbwstompers.com` **has no mailbox and no SMTP server.** Email Routing
+only receives. Sending works by relaying through Gmail's own SMTP:
 
-These DNS records still point at the SiteGround box `35.215.87.106` and should
-be deleted once it's gone: `autoconfig`, `autodiscover`, `ftp`, `mail`, `ssh`.
-Leave them unproxied while they're live — proxying non-HTTP services breaks
-them, and Cloudflare's "origin IP partially exposed" recommendation about them
-is expected, not a problem to fix.
+| Field | Value |
+| --- | --- |
+| SMTP server | `smtp.gmail.com`, port `587`, **TLS** |
+| Username | the band's **Gmail** address — *not* `hello@fbwstompers.com` |
+| Password | a Google **app password**, not the account password |
+
+The app password needs 2-Step Verification enabled; the normal account password
+returns "Authentication error" because Google blocks it for external SMTP.
+
+What broke: Gmail's send-as had been carried over from the WordPress era, still
+pointed at SMTP server `fbwstompers.com:465`. That worked when the apex resolved
+to the SiteGround box running a real mailbox. After the migration the apex points
+at the Worker, and Cloudflare's proxy refuses SMTP — so Gmail could not connect
+and **every send failed silently**. Gmail's Sent folder showed the message, no
+bounce ever arrived, and nothing reached the recipient. It looked like a spam
+filter for a while; it wasn't.
+
+Diagnosing this class of failure: mail that reaches *nobody* (not even
+`mail-tester.com`) is a sending failure, not a filtering problem. Filtering
+looks like mail arriving for some recipients and not others.
+
+SPF must authorize both services, in one record, or Gmail-relayed mail is
+unauthenticated:
+
+```
+v=spf1 include:_spf.mx.cloudflare.net include:_spf.google.com ~all
+```
+
+Cloudflare's own setup only adds the first include. Keep DMARC at `p=none` —
+free Gmail signs DKIM as `gmail.com`, so mail from this domain can never align,
+and a stricter policy would reject the band's own mail.
+
+## SiteGround is gone (deactivated Aug 9, 2026)
+
+Cancelled rather than renewed — saves $215.88/yr. Its mailboxes were checked
+first and held nothing worth keeping, so nothing was exported.
+
+`mail`, `autoconfig`, and `autodiscover` were deleted from DNS with it. **`ftp`
+and `ssh` are still in the zone**, still pointing at the decommissioned box
+`35.215.87.106`; nothing references them and they can go whenever. That is also
+what keeps Cloudflare's "origin IP partially exposed" recommendation showing —
+expected, not a problem to fix.
+
+Deleting `mail` mattered more than it looks. The box stayed up and kept
+answering SMTP on ports 25/465/587 after deactivation, so a mail client that
+auto-discovered it would try to authenticate against a server the band no
+longer controls.
 
 ## Edit `src/`, never `dist/`
 
@@ -160,19 +202,14 @@ per-page notes. Read it before any non-trivial change.
 - Whether the old `/payment/` page is dead (it has no redirect yet, and currently
   404s in production — confirmed live)
 
-### Time-boxed — these expire when SiteGround does on Aug 25, 2026
+### Loose ends from the Aug 9 session
 
-- **Does SiteGround hold an `@fbwstompers.com` mailbox with mail worth keeping?**
-  Raised three times, never confirmed. The domain had live MX records pointing at
-  SiteGround's filter before the cutover, so a mailbox plausibly exists. Check
-  Site Tools → Email → Accounts and export before the account lapses.
-- **Full WordPress backup** (files + database) as insurance. Not taken yet.
-
-### Unfinished from the Aug 9 session
-
-- Email Routing is **enabled with DNS in place, but not finished**: still needs a
-  verified destination address, at least one route (e.g. `booking@` → Gmail,
-  plus optionally a catch-all), and the Gmail "Send mail as" alias.
+- **No WordPress backup was ever taken.** SiteGround is now deactivated, so the
+  window has closed. `_source/` holds the scrape of the public pages, which is
+  all that survives — no database, no theme, no plugin config.
+- `ftp` and `ssh` DNS records still point at the dead SiteGround box.
+- A stale `_domainkey` TXT (`"v=DKIM1; o=~"`) is still in the zone. Harmless —
+  different selector from Cloudflare's `cf2024-1._domainkey` — but it is noise.
 - `_source/` — the raw WordPress scrape, including `roof-home.html` full of
   Elementor markup — is committed. It alarmed Ben on sight; worth knowing it is
   inert reference data that `build.py` never reads (zero references, verified).

@@ -437,8 +437,9 @@ need translating into `.htaccess` rules instead.
 - [x] 301 redirect map (`dist/_redirects`) — `/payment/` still undecided
 - [x] Host selection + deploy — Cloudflare Workers, live on the real domain
       Aug 9, 2026. See CLAUDE.md for the full infrastructure map.
-- [ ] Finish Cloudflare Email Routing (destination address, routes, Gmail alias)
-- [ ] Export anything worth keeping off SiteGround before it lapses Aug 25, 2026
+- [x] Cloudflare Email Routing live; `hello@fbwstompers.com` sends and receives
+- [x] SiteGround deactivated Aug 9, 2026 — mailboxes checked, nothing to keep
+      (no WordPress backup was taken; that window has closed)
 
 ## Notes on the old site
 
