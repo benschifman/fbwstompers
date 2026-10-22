@@ -284,6 +284,53 @@ Each of the six pages has its own `nav:` front-matter value
 `about/repertoire/`. The hub page (`services.html`) keeps `nav: services`,
 highlighting the parent, matching how `about.html` behaves.
 
+## Band mixer (configurations page)
+
+`/about/configurations/#hear-the-difference` — a band illustration plus a
+player. Visitors press play, then tap a player (or the chip under the art) to
+take them out of the band or bring them back. The song keeps playing: the
+player switches to another recording of **the same take** at the same point.
+
+**How a toggle finds its recording.** Each `<audio>` in the mixer carries
+`data-players` — who is on that recording. Tapping a player looks for the
+recording whose set is exactly the current one with that player added or
+removed. If none exists, that toggle is disabled. So the illustration and the
+recordings are independent; adding a lineup is just adding an `<audio>`.
+
+**Adding a recording / a switchable player:**
+
+```bash
+# audio: same take, same length, one change. Any filename.
+cp new-mix.mp3 assets/audio/orig/
+# art (only for a newly switchable player): the full illustration with that
+# one player blacked out, same size, nothing else changed
+cp tuba-off.png assets/img/mixer/orig/
+python3 _source/mixer.py     # needs ffmpeg; prints the overlay <img> line
+```
+
+Then in `src/pages/configurations.html`: an `<audio>` with its
+`data-players`, and for a new player the printed `.mixer__off` overlay, a
+`.mixer__hotspot` (position as `--x/--y/--w/--h` in % of the art) and a
+`.mixer__chip`.
+
+`_source/mixer.py` does two things:
+
+- **Loudness-matches every mix** to −18 LUFS (one fixed gain per file, no
+  compression) and encodes 128 kbps — ~3.7 MB for 3:51, down from 9.2 MB.
+  Without matching, the mix with more players is louder and louder reads as
+  "better". The two current mixes were 0.8 LU apart.
+- **Extracts each player's "off" state as a small transparent patch** — the
+  pixels that differ from the base art, feathered — so players toggle
+  independently with one base image and no image per combination.
+
+**Switching.** The incoming track starts silent, is re-seeked until it lines
+up with the outgoing one (measured headless: within ~20–40 ms), then
+crossfades in over 160 ms. iOS ignores `volume`, so there it uses `muted` and
+cuts instead of fading. Only the first mix preloads metadata (for the
+duration); the others load on first switch.
+
+Without JS the mixer is the art plus a plain list of `<audio controls>`.
+
 ## Events
 
 `data/events.json` is the source of truth until the Google Calendar exists.

@@ -71,8 +71,70 @@ schema: band
     </div>
   </section>
 
+  <!-- ===== Band mixer =====
+       Each <audio> is one recording of the same take, and data-players lists
+       who is on it. Tapping a player looks for the mix with exactly that
+       player added or removed; if there isn't one, that toggle is disabled.
+       So adding a recording is: add an <audio>, plus a .mixer__off overlay
+       and a hotspot/chip for any newly switchable player. Media is prepared
+       by `python3 _source/mixer.py` — see that file. Without JS, the plain
+       track list below is what visitors get. -->
+  <section class="section section--paper" id="hear-the-difference">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">Hear the difference</p>
+        <h2>Take a player out of the band</h2>
+        <p class="lede">Press play, then tap a player to drop them out or bring them back. The tune keeps
+          going, so you hear exactly what that one instrument adds.</p>
+      </div>
+
+      <div class="mixer" data-mixer>
+        <div class="mixer__stage">
+          <picture>
+            <source type="image/webp" srcset="/assets/img/band-mixer-640.webp 640w, /assets/img/band-mixer-1024.webp 1024w" sizes="(min-width: 60rem) 56rem, 100vw">
+            <img src="/assets/img/band-mixer-1024.jpg"
+                 alt="Illustration of a 1920s-style jazz band in tuxedos: guitar, string bass, tuba, banjo, drums, piano, trumpet, clarinet, and trombone."
+                 width="1024" height="683" loading="lazy" decoding="async">
+          </picture>
+          <img class="mixer__off" data-player="bass" src="/assets/img/mixer/bass-off.webp" alt="" width="296" height="557" loading="lazy" decoding="async" style="left:16.21%;top:0.49%;width:19.27%">
+          <button class="mixer__hotspot" type="button" data-player="bass" tabindex="-1" aria-hidden="true" hidden
+                  style="--x:17.3%;--y:1.5%;--w:15.6%;--h:34.6%"><span>String bass</span></button>
+        </div>
+
+        <div class="mixer__deck" hidden>
+          <button class="mixer__play" type="button" aria-label="Play">
+            <svg class="mixer__icon-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z"/></svg>
+            <svg class="mixer__icon-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>
+          </button>
+          <span class="mixer__time">0:00</span>
+          <input class="mixer__seek" type="range" min="0" max="0" step="0.1" value="0" aria-label="Position in the song">
+          <span class="mixer__time mixer__duration">&ndash;:&ndash;&ndash;</span>
+        </div>
+
+        <div class="mixer__players" role="group" aria-label="Players" hidden>
+          <span class="mixer__players-label">Players</span>
+          <button class="mixer__chip" type="button" data-player="bass" aria-pressed="true">String bass</button>
+          <p class="mixer__now" aria-live="polite"></p>
+        </div>
+
+        <ul class="mixer__tracks">
+          <li>
+            <span>Tuba and string bass</span>
+            <audio controls preload="metadata" data-players="bass tuba piano drums guitar banjo" data-label="Tuba and string bass"
+                   src="/assets/audio/when-bass-piano-drums-guitar-banjo-multi-tuba.mp3"></audio>
+          </li>
+          <li>
+            <span>Tuba, no string bass</span>
+            <audio controls preload="none" data-players="tuba piano drums guitar banjo" data-label="Tuba, no string bass"
+                   src="/assets/audio/when-piano-drums-guitar-banjo-multi-tuba.mp3"></audio>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
   <!-- ===== What each addition brings ===== -->
-  <section class="section section--paper">
+  <section class="section">
     <div class="wrap">
       <div class="section-head">
         <p class="eyebrow">Building up</p>

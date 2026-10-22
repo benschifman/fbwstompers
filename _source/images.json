@@ -27,22 +27,21 @@
       1600
     ]
   },
-  "tented-reception-2026": {
-    "src": "Tented Reception 2026.jpg",
-    "w": 2000,
-    "h": 1333,
-    "sizes": [
-      640,
-      1024,
-      1600
-    ]
-  },
   "band-portrait": {
     "src": "a4afd58b0ce35183060ad4cc60c70059-e1562449883211.jpg",
     "w": 226,
     "h": 300,
     "sizes": [
       640
+    ]
+  },
+  "band-mixer": {
+    "src": "band-mixer.webp",
+    "w": 1536,
+    "h": 1024,
+    "sizes": [
+      640,
+      1024
     ]
   },
   "config-core": {

@@ -214,11 +214,8 @@ per-page notes. Read it before any non-trivial change.
   Elementor markup — is committed. It alarmed Ben on sight; worth knowing it is
   inert reference data that `build.py` never reads (zero references, verified).
   Offered to strip it from the repo; he left it in. Still fair game to remove.
-- Idea discussed, not built: an **A/B audio player** on the Configurations page
-  letting visitors compare lineups (tuba vs. string bass, banjo vs. guitar).
-  Hosting cost is a non-issue — ~12 short MP3s is smaller than the image library,
-  and Cloudflare's terms only bite on bulk video. The hard parts are recording
-  discipline, not infrastructure: same tune, same take, same room, one variable
-  changed; loudness-normalize every clip to the same LUFS or the louder one just
-  sounds "better"; `preload="none"` so audio doesn't download for people who
-  never press play. If it ever grows past a few GB, move the files to R2.
+- The **A/B audio player** idea was built (Oct 2026) as the band mixer on the
+  Configurations page — see README "Band mixer". The recording discipline
+  still applies to every new mix: same tune, same take, one variable changed.
+  `_source/mixer.py` handles loudness matching; if the audio ever grows past a
+  few GB, move it to R2.
