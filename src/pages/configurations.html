@@ -89,6 +89,54 @@ schema: band
       </div>
 
       <div class="mixer" data-mixer>
+        <!-- Lineup presets. Each selects the recording whose data-players is
+             exactly its data-players; with no such recording it shows disabled.
+             Lineups are as Ben specified, Oct 2026. -->
+        <div class="mixer__lineups" hidden>
+          <div class="mixer__lineup" role="group" aria-label="Quartet">
+            <span class="mixer__lineup-name">Quartet</span>
+            <div class="mixer__lineup-options">
+              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet banjo tuba" aria-label="Quartet with banjo and tuba">Banjo &amp; tuba</button>
+              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet guitar tuba" aria-label="Quartet with guitar and tuba">Guitar &amp; tuba</button>
+              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet banjo bass" aria-label="Quartet with banjo and string bass">Banjo &amp; string bass</button>
+              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet guitar bass" aria-label="Quartet with guitar and string bass">Guitar &amp; string bass</button>
+            </div>
+          </div>
+          <div class="mixer__lineup" role="group" aria-label="Quintet">
+            <span class="mixer__lineup-name">Quintet</span>
+            <div class="mixer__lineup-options">
+              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet drums banjo tuba" aria-label="Quintet with banjo and tuba">Banjo &amp; tuba</button>
+              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet drums guitar tuba" aria-label="Quintet with guitar and tuba">Guitar &amp; tuba</button>
+              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet drums banjo bass" aria-label="Quintet with banjo and string bass">Banjo &amp; string bass</button>
+              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet drums guitar bass" aria-label="Quintet with guitar and string bass">Guitar &amp; string bass</button>
+            </div>
+          </div>
+          <div class="mixer__lineup" role="group" aria-label="Sextet with trombone">
+            <span class="mixer__lineup-name">Sextet + trombone</span>
+            <div class="mixer__lineup-options">
+              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet drums trombone banjo tuba" aria-label="Sextet with trombone with banjo and tuba">Banjo &amp; tuba</button>
+              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet drums trombone guitar tuba" aria-label="Sextet with trombone with guitar and tuba">Guitar &amp; tuba</button>
+              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet drums trombone banjo bass" aria-label="Sextet with trombone with banjo and string bass">Banjo &amp; string bass</button>
+              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet drums trombone guitar bass" aria-label="Sextet with trombone with guitar and string bass">Guitar &amp; string bass</button>
+            </div>
+          </div>
+          <div class="mixer__lineup" role="group" aria-label="Sextet with piano">
+            <span class="mixer__lineup-name">Sextet + piano</span>
+            <div class="mixer__lineup-options">
+              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet drums piano banjo tuba" aria-label="Sextet with piano with banjo and tuba">Banjo &amp; tuba</button>
+              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet drums piano guitar tuba" aria-label="Sextet with piano with guitar and tuba">Guitar &amp; tuba</button>
+              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet drums piano banjo bass" aria-label="Sextet with piano with banjo and string bass">Banjo &amp; string bass</button>
+              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet drums piano guitar bass" aria-label="Sextet with piano with guitar and string bass">Guitar &amp; string bass</button>
+            </div>
+          </div>
+          <div class="mixer__lineup" role="group" aria-label="Full band">
+            <span class="mixer__lineup-name">Full band</span>
+            <div class="mixer__lineup-options">
+              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet trombone banjo guitar tuba bass drums piano" aria-label="Full band, everyone in the picture">Everyone in the picture</button>
+            </div>
+          </div>
+        </div>
+
         <div class="mixer__stage">
           <picture>
             <source type="image/webp" srcset="/assets/img/band-mixer-640.webp 640w, /assets/img/band-mixer-1024.webp 1024w" sizes="(min-width: 60rem) 56rem, 100vw">

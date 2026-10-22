@@ -206,6 +206,10 @@
     if (mixes.length < 2) return;
 
     const toggles = [...root.querySelectorAll("button[data-player]")];
+    const presets = [...root.querySelectorAll("button[data-preset]")].map((el) => ({
+      el,
+      players: new Set(el.dataset.players.split(/\s+/)),
+    }));
     const overlays = [...root.querySelectorAll(".mixer__off[data-player]")];
     const playBtn = root.querySelector(".mixer__play");
     const seek = root.querySelector(".mixer__seek");
@@ -256,6 +260,12 @@
         const key = b.dataset.player;
         b.setAttribute("aria-pressed", String(current.players.has(key)));
         b.disabled = !toggled(key);
+      }
+      for (const p of presets) {
+        const mix = mixes.find((m) => same(m.players, p.players));
+        p.el.disabled = !mix;
+        p.el.title = mix ? "" : "No recording of this lineup yet";
+        p.el.setAttribute("aria-pressed", String(mix === current));
       }
       for (const img of overlays) {
         img.dataset.visible = String(!current.players.has(img.dataset.player));
@@ -346,9 +356,8 @@
       })();
     };
 
-    const choose = (key) => {
-      const next = toggled(key);
-      if (!next) return;
+    const choose = (next) => {
+      if (!next || next === current) return;
       current = next;
       if (playing && live && live !== current) swap(live, current);
       else if (playing && live === current) { ++seq; settle(); }
@@ -402,12 +411,19 @@
     });
 
     for (const b of toggles) {
-      b.addEventListener("click", () => choose(b.dataset.player));
+      b.addEventListener("click", () => choose(toggled(b.dataset.player)));
+    }
+    for (const p of presets) {
+      p.el.addEventListener("click", () =>
+        choose(mixes.find((m) => same(m.players, p.players)))
+      );
     }
 
     root.querySelector(".mixer__tracks").hidden = true;
     root.querySelector(".mixer__deck").hidden = false;
     root.querySelector(".mixer__players").hidden = false;
+    const lineups = root.querySelector(".mixer__lineups");
+    if (lineups) lineups.hidden = false;
     root.querySelectorAll(".mixer__hotspot").forEach((h) => (h.hidden = false));
     root.dataset.ready = "true";
     render();

@@ -329,6 +329,13 @@ crossfades in over 160 ms. iOS ignores `volume`, so there it uses `muted` and
 cuts instead of fading. Only the first mix preloads metadata (for the
 duration); the others load on first switch.
 
+**Lineup buttons.** Above the art, one row per size (quartet = trumpet,
+clarinet, rhythm, bass; quintet adds drums; two sextets add trombone or piano;
+full band is everyone in the picture), with a button per rhythm/bass pairing.
+Each `.mixer__preset` selects the recording whose `data-players` is exactly its
+own, and shows greyed out until such a recording exists. Player keys used:
+`trumpet clarinet trombone banjo guitar tuba bass drums piano`.
+
 Without JS the mixer is the art plus a plain list of `<audio controls>`.
 
 ## Events

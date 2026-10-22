@@ -869,6 +869,52 @@ a:hover { color: var(--gold-bright); }
 /* Capped so the play button stays on screen with the art on a laptop. */
 .mixer { max-width: 56rem; }
 
+/* Lineup presets: one row per band size, a button per rhythm/bass pairing. */
+.mixer__lineups {
+  display: grid;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-m);
+  padding-bottom: var(--space-m);
+  border-bottom: 1px solid var(--rule);
+}
+.section--paper .mixer__lineups { border-bottom-color: var(--rule-dark); }
+.mixer__lineup {
+  display: grid;
+  gap: var(--space-2xs) var(--space-s);
+  align-items: center;
+}
+@media (min-width: 40rem) {
+  .mixer__lineup { grid-template-columns: 10rem minmax(0, 1fr); }
+}
+.mixer__lineup-name {
+  font-size: var(--step--1);
+  font-weight: 500;
+  color: var(--cream);
+}
+.section--paper .mixer__lineup-name { color: var(--ink-800); }
+.mixer__lineup-options { display: flex; flex-wrap: wrap; gap: var(--space-2xs); }
+
+.mixer__preset {
+  padding: 0.4em 0.9em;
+  font-family: var(--font-body);
+  font-size: var(--step--1);
+  font-weight: 400;
+  border-radius: var(--radius);
+  border: 1px solid rgb(242 240 235 / 0.24);
+  background: transparent;
+  color: var(--cream);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+.mixer__preset:hover { border-color: var(--gold); }
+.mixer__preset[aria-pressed="true"] { background: var(--gold); border-color: var(--gold); color: var(--ink-800); }
+.mixer__preset:disabled { opacity: 0.45; cursor: not-allowed; border-style: dashed; }
+.mixer__preset:disabled:hover { border-color: rgb(242 240 235 / 0.24); }
+.section--paper .mixer__preset { border-color: rgb(10 10 12 / 0.22); color: var(--ink-800); }
+.section--paper .mixer__preset:hover { border-color: var(--ink-800); }
+.section--paper .mixer__preset[aria-pressed="true"] { background: var(--ink-800); border-color: var(--ink-800); color: var(--paper); }
+.section--paper .mixer__preset:disabled:hover { border-color: rgb(10 10 12 / 0.22); }
+
 .mixer__stage {
   position: relative;
   border-radius: var(--radius-lg);
