@@ -5,14 +5,22 @@
 Needs ffmpeg on PATH (audio) and Pillow (overlays). Re-running on unchanged
 sources reproduces the same files.
 
-AUDIO — assets/audio/orig/*.mp3 -> assets/audio/<name>.mp3
+AUDIO — assets/audio/stems/orig/<track>.mp3
+        -> assets/audio/stems/{full,excerpt}/<track>.mp3 + mix.json
 
-Every mix is loudness-matched to TARGET_LUFS and re-encoded at 128 kbps. The
-matching is the point, not a nicety: without it the mix with more players is
-simply louder, and louder reads as "better", so the comparison would be rigged.
-Gain is a single fixed amount per file (no compression), so the dynamics of
-each take are untouched. Every mix must be the same take, same length, so the
-player can switch between them mid-song without losing its place.
+One file per instrument track, all from the same session export: same start,
+same length. The browser downloads every track and mixes them live, so any
+lineup plays in perfect sync. That means every track has to sit decoded in
+memory at once, so each track is made in two VARIANTS: the full song for
+desktops (~400 MB decoded, ~25 MB to download) and a short excerpt for phones
+and tablets (75 s: ~110 MB decoded, ~7.5 MB), which would crash on the full
+song. main.js picks one per visitor. Every track except STEREO ones is folded
+to mono, which halves both numbers.
+
+The tracks' relative levels are left exactly as exported — never matched per
+track, or the band's balance is gone. Each variant's mix.json carries one
+master gain that puts the whole band, all tracks summed, at a -1 dBFS peak,
+plus the length and a waveform outline per track for the page to draw.
 
 OVERLAYS — assets/img/mixer/orig/<player>-off.* -> assets/img/mixer/<player>-off.webp
 
@@ -29,10 +37,17 @@ of the base image, ready to paste into src/pages/configurations.html.
 from PIL import Image, ImageChops, ImageFilter
 import os, re, subprocess, sys
 
-AUDIO_SRC = 'assets/audio/orig'
-AUDIO_OUT = 'assets/audio'
-TARGET_LUFS = -18.0
-BITRATE = '128k'
+AUDIO_SRC = 'assets/audio/stems/orig'
+AUDIO_OUT = 'assets/audio/stems'
+# name: (start, length or None for all of it, fade-out at the end), in seconds
+VARIANTS = {
+    'full': (0.0, None, 0.0),
+    'excerpt': (0.0, 75.0, 2.5),
+}
+STEREO = {'piano', 'drums'}   # genuinely wide; the rest are (near-)mono
+BITRATE = {1: '96k', 2: '160k'}
+PEAK_TARGET_DB = -1.0
+WAVE_BINS = 480         # waveform resolution; the page scales it to fit
 
 BASE = 'assets/img/orig/band-mixer.webp'
 OVERLAY_SRC = 'assets/img/mixer/orig'
@@ -45,34 +60,68 @@ def slugify(stem: str) -> str:
     return re.sub(r'[^a-z0-9]+', '-', stem.lower()).strip('-')
 
 
-def loudness(path: str) -> float:
-    out = subprocess.run(
-        ['ffmpeg', '-hide_banner', '-nostats', '-i', path, '-af', 'ebur128', '-f', 'null', '-'],
-        capture_output=True, text=True,
-    ).stderr
-    summary = out[out.rindex('Summary:'):]
-    return float(re.search(r'I:\s+(-?[\d.]+) LUFS', summary).group(1))
+def decode(path: str, channels: int = 2) -> 'numpy.ndarray':
+    import numpy as np
+    raw = subprocess.run(
+        ['ffmpeg', '-v', 'error', '-i', path, '-ac', str(channels), '-ar', '44100', '-f', 'f32le', '-'],
+        capture_output=True, check=True,
+    ).stdout
+    return np.frombuffer(raw, np.float32).reshape(-1, channels)
 
 
 def audio():
     if not os.path.isdir(AUDIO_SRC):
         return
+    for variant, cut in VARIANTS.items():
+        render_variant(variant, *cut)
+
+
+def render_variant(variant, start, length, fade):
+    import json
+    import numpy as np
+    out_dir = os.path.join(AUDIO_OUT, variant)
+    os.makedirs(out_dir, exist_ok=True)
+    tracks = {}
     for fn in sorted(os.listdir(AUDIO_SRC)):
         stem, ext = os.path.splitext(fn)
         if fn.startswith('.') or ext.lower() not in {'.mp3', '.wav', '.flac', '.m4a', '.aif', '.aiff'}:
             continue
+        name = slugify(stem)
         src = os.path.join(AUDIO_SRC, fn)
-        out = os.path.join(AUDIO_OUT, slugify(stem) + '.mp3')
-        lufs = loudness(src)
-        gain = TARGET_LUFS - lufs
+        out = os.path.join(out_dir, name + '.mp3')
+        ch = 2 if name in STEREO else 1
+        cut = ['-ss', str(start)] + (['-t', str(length)] if length else [])
+        filters = ['-af', f'afade=t=out:st={length - fade}:d={fade}'] if length and fade else []
         subprocess.run(
-            ['ffmpeg', '-v', 'error', '-y', '-i', src,
-             '-af', f'volume={gain:.2f}dB',
-             '-map_metadata', '-1', '-c:a', 'libmp3lame', '-b:a', BITRATE,
+            ['ffmpeg', '-v', 'error', '-y', *cut, '-i', src, *filters, '-ac', str(ch),
+             '-map_metadata', '-1', '-c:a', 'libmp3lame', '-b:a', BITRATE[ch],
              '-fflags', '+bitexact', '-flags:a', '+bitexact', out],
             check=True,
         )
-        print(f'{out:52} {lufs:6.1f} LUFS {gain:+5.1f} dB  {os.path.getsize(out)/1e6:.1f} MB')
+        # Measure what the browser will actually play: the encoded output.
+        tracks[name] = decode(out, ch)
+        print(f'{out:48} {"stereo" if ch == 2 else "mono  "}  {os.path.getsize(out)/1e6:5.2f} MB')
+
+    if not tracks:
+        return
+    n = min(len(t) for t in tracks.values())
+    band = np.zeros((n, 2), np.float32)
+    for t in tracks.values():
+        band += t[:n]          # a mono track plays equally in both speakers
+    peak_db = 20 * np.log10(np.abs(band).max())
+    gain_db = round(float(PEAK_TARGET_DB - peak_db), 2)
+
+    waves = {}
+    for name, t in tracks.items():
+        mono = np.abs(t[:n]).max(axis=1)
+        edges = np.linspace(0, n, WAVE_BINS + 1).astype(int)
+        # 0-100, on one scale for every track, so a quiet part looks quiet.
+        waves[name] = [int(round(100 * mono[a:b].max())) for a, b in zip(edges, edges[1:])]
+    doc = {'duration': round(n / 44100, 3), 'gainDb': gain_db, 'waves': waves}
+    with open(os.path.join(out_dir, 'mix.json'), 'w') as f:
+        json.dump(doc, f, separators=(',', ':'))
+    print(f'{variant}/mix.json  {doc["duration"]} s, whole band peaks at {peak_db:+.1f} dBFS'
+          f' -> master {gain_db:+.1f} dB\n')
 
 
 def overlays():

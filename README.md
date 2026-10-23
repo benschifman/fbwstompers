@@ -286,61 +286,62 @@ highlighting the parent, matching how `about.html` behaves.
 
 ## Band mixer (configurations page)
 
-`/about/configurations/#hear-the-difference` — a lineup builder, a band
-illustration, and a player. Visitors build a band from instrument buttons
-grouped as Strings (banjo, guitar), Bass (tuba, string bass), Horns (trumpet,
-clarinet, trombone), Keys (piano), Drums (drum kit) and Vocals (male, female),
-or by tapping a player in the art. It starts as a quartet — banjo, tuba,
-trumpet, clarinet — and the heading above the buttons names the size as it
-changes (Quartet, Quintet, Sextet …). Every group can be emptied except
-Strings and Bass (at least one each) and Horns (at least two): that floor is
-the quartet. The rules live in the markup as `data-min` on each group.
+`/about/configurations/#hear-the-difference` — a multitrack player. The band
+illustration and transport sit on the left; on the right, one row per
+instrument track grouped as Strings (banjo, guitar), Bass (tuba, string bass),
+Horns, Keys (piano) and Drums, each with an on/off switch, a waveform and a
+Solo button. A heading names the lineup's size (Quintet, Sextet …) as it
+changes. Tapping a player in the art switches their track too.
 
-**How the sound follows the lineup.** Each `<audio>` in the mixer carries
-`data-players` — who is on that recording. Whenever the selected lineup
-matches one exactly, that recording plays, picking up at the same point in the
-song (it's the same take). Any other lineup fades to silence with "We haven't
-recorded this lineup yet", and playback resumes when the visitor lands on a
-recorded one. So adding a lineup is just adding an `<audio>`.
+**How it plays.** Every track is a separate recording of the same take, mixed
+live in the browser with the Web Audio API: all tracks start on the same
+scheduled instant and each runs through its own gain node, so switching or
+soloing only ramps a gain — every lineup is in sync to the sample, and there
+is no per-lineup recording to make. Nothing downloads until the first press of
+play; then every track is fetched and decoded, because Web Audio needs the
+whole clip in memory.
 
-The two current recordings are the full band (all nine players in the art),
-with and without string bass, so only the octet and nonet play today. Player
-keys: `banjo guitar tuba bass trumpet clarinet trombone piano drums
-vocals-male vocals-female`.
+That memory is why there are **two versions**: desktops get the full song
+(4:10, ~24 MB, ~400 MB decoded) and touch devices — or anything reporting
+under 4 GB of memory, or Save-Data — get a 75-second excerpt from the top
+(~7 MB, ~110 MB decoded), which phones can hold. `main.js` picks one.
 
-**Adding a recording / a switchable player:**
+**Lineup rules** (as specified, Oct 2026) live in the markup: `data-min` on
+each group is the fewest players it may drop to — one string, one bass, two
+horns. Solo is for listening only: it overrides the lineup without changing
+it. Starts on banjo, tuba and horns.
+
+The horns are currently **one track** ("All three": trumpet, clarinet,
+trombone), so they can't be split up and can't be switched off (that would
+leave fewer than two horns). Separate horn tracks would just be three rows
+instead of one. There are no vocal tracks yet, so there's no Vocals group.
+
+**Adding or replacing tracks:**
 
 ```bash
-# audio: same take, same length, one change. Any filename.
-cp new-mix.mp3 assets/audio/orig/
-# art (only for a newly switchable player): the full illustration with that
-# one player blacked out, same size, nothing else changed
-cp tuba-off.png assets/img/mixer/orig/
-python3 _source/mixer.py     # needs ffmpeg; prints the overlay <img> line
+cp trumpet.mp3 assets/audio/stems/orig/   # any audio format; name = track id
+python3 _source/mixer.py --audio          # needs ffmpeg + numpy
 ```
 
-Then in `src/pages/configurations.html`: an `<audio>` with its
-`data-players`, and for a player who should black out in the art the printed
-`.mixer__off` overlay, plus optionally a `.mixer__hotspot` (position as
-`--x/--y/--w/--h` in % of the art) to make them tappable.
+then add a `.mixer__track` row with that `data-track` and its `data-players`
+in `src/pages/configurations.html`, plus a line in the no-JS track list.
 
-`_source/mixer.py` does two things:
+`_source/mixer.py` cuts both versions, folds everything but piano and drums to
+mono (halving size and memory), and writes each version's `mix.json`: the
+length, a waveform outline per track, and **one master gain** that puts the
+whole band at a -1 dBFS peak. The tracks' relative levels are never changed —
+that balance is the mix. The supplied tracks all peaked at almost exactly
+-0.9 dBFS, which suggests they were normalized one by one on export; if the
+balance sounds wrong, that's the place to look.
 
-- **Loudness-matches every mix** to −18 LUFS (one fixed gain per file, no
-  compression) and encodes 128 kbps — ~3.7 MB for 3:51, down from 9.2 MB.
-  Without matching, the mix with more players is louder and louder reads as
-  "better". The two current mixes were 0.8 LU apart.
-- **Extracts each player's "off" state as a small transparent patch** — the
-  pixels that differ from the base art, feathered — so players toggle
-  independently with one base image and no image per combination.
+**Overlays.** A player who should black out in the art when switched off
+needs a "player-off" image (the full illustration with just that player
+blacked out, nothing else changed) in `assets/img/mixer/orig/`; `mixer.py`
+cuts it down to a small transparent patch and prints the `<img>` line. Only
+the string bass has one so far.
 
-**Switching.** The incoming track starts silent, is re-seeked until it lines
-up with the outgoing one (measured headless: within ~20–40 ms), then
-crossfades in over 160 ms. iOS ignores `volume`, so there it uses `muted` and
-cuts instead of fading. Only the first mix preloads metadata (for the
-duration); the others load on first switch.
-
-Without JS the mixer is the art plus a plain list of `<audio controls>`.
+Without JS (or Web Audio) the section is the art plus a plain list of the
+tracks as `<audio controls>`.
 
 ## Events
 

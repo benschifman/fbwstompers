@@ -866,40 +866,85 @@ a:hover { color: var(--gold-bright); }
    Band mixer (configurations) — see the comment in main.js
    ========================================================================== */
 
-/* Capped so the play button stays on screen with the art on a laptop. */
-.mixer { max-width: 56rem; }
-
-/* Lineup builder: the band's size, then one row per instrument group. */
-.mixer__builder {
+/* Art and transport on the left, the band's tracks on the right; stacked
+   on narrow screens, art first. Waveform colors are tokens on .mixer so the
+   canvas drawing in main.js picks up the dark/paper pair. */
+.mixer {
+  --wave-on: rgb(242 240 235 / 0.55);
+  --wave-played: #c9a84c;
+  --wave-off: rgb(242 240 235 / 0.14);
   display: grid;
-  gap: var(--space-xs);
-  margin-bottom: var(--space-m);
+  gap: var(--space-l);
+  align-items: start;
 }
+.section--paper .mixer {
+  --wave-on: rgb(12 12 14 / 0.42);
+  --wave-played: #80661f;
+  --wave-off: rgb(12 12 14 / 0.1);
+}
+@media (min-width: 64rem) {
+  .mixer { grid-template-columns: minmax(0, 35rem) minmax(0, 1fr); gap: var(--space-xl); }
+  .mixer__view { position: sticky; top: 6.5rem; }
+  .mixer__tracks { grid-column: 1 / -1; }
+}
+
+.mixer__builder { display: grid; gap: var(--space-s); }
 .mixer__size {
-  margin: 0 0 var(--space-2xs);
+  margin: 0;
   font-family: var(--font-display);
   font-size: var(--step-2);
   line-height: 1.1;
   color: var(--gold);
 }
 .section--paper .mixer__size { color: var(--gold-dark); }
-.mixer__group {
-  display: grid;
-  gap: var(--space-2xs) var(--space-s);
-  align-items: center;
-}
-@media (min-width: 40rem) {
-  .mixer__group { grid-template-columns: 6rem minmax(0, 1fr); }
-}
+.mixer__group { display: grid; gap: var(--space-2xs); }
 .mixer__group-name {
+  margin: 0;
   font-size: var(--step--1);
   font-weight: 500;
-  color: var(--cream);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
-.section--paper .mixer__group-name { color: var(--ink-800); }
-.mixer__group-options { display: flex; flex-wrap: wrap; gap: var(--space-2xs); }
+.section--paper .mixer__group-name { color: var(--muted-dark); }
+
+/* One row per track: switch, waveform, solo. */
+.mixer__track {
+  display: grid;
+  grid-template-columns: 8rem minmax(0, 1fr) auto;
+  gap: var(--space-xs);
+  align-items: center;
+}
+.mixer__track .mixer__chip { justify-content: flex-start; white-space: nowrap; }
+.mixer__wave {
+  display: block;
+  width: 100%;
+  height: 2.5rem;
+  cursor: pointer;
+  touch-action: none;
+}
+.mixer__solo {
+  padding: 0.35em 0.7em;
+  font-family: var(--font-body);
+  font-size: var(--step--1);
+  font-weight: 500;
+  border-radius: var(--radius);
+  border: 1px solid rgb(242 240 235 / 0.3);
+  background: transparent;
+  color: var(--cream);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+.mixer__solo:hover { border-color: var(--gold); }
+.mixer__solo[aria-pressed="true"] { background: var(--gold); border-color: var(--gold); color: var(--ink-800); }
+.section--paper .mixer__solo { border-color: rgb(10 10 12 / 0.3); color: var(--ink-800); }
+.section--paper .mixer__solo:hover { border-color: var(--ink-800); }
+.section--paper .mixer__solo[aria-pressed="true"] { background: var(--gold-dark); border-color: var(--gold-dark); color: var(--white); }
+/* While something is soloed, a switched-on track that is silenced by it reads dimmer. */
+.mixer[data-solo="true"] .mixer__track[data-audible="false"] .mixer__chip { opacity: 0.55; }
+
 .mixer__note {
-  min-height: 1.6em;   /* reserved, so the art doesn't jump when it appears */
+  min-height: 1.6em;   /* reserved, so nothing jumps when it appears */
   margin: 0;
   font-size: var(--step--1);
   color: var(--gold-bright);
@@ -964,7 +1009,6 @@ a:hover { color: var(--gold-bright); }
   transition: background var(--transition);
 }
 .mixer__play:hover { background: var(--gold-bright); }
-.mixer__play:disabled { opacity: 0.4; cursor: not-allowed; }
 .mixer__play svg { width: 1.5rem; height: 1.5rem; fill: currentColor; }
 .mixer__icon-pause,
 .mixer[data-playing="true"] .mixer__icon-play { display: none; }

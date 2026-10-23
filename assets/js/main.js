@@ -189,36 +189,58 @@
   }
 
   /* --- Band mixer (configurations) ------------------------------------
-     Several recordings of the same take, each with a different lineup.
-     Visitors build a lineup from the instrument buttons (or by tapping
-     players in the art); whenever it matches a recording exactly, that
-     recording plays from the same point in the song. Lineups nobody has
-     recorded yet stop the sound and say so. Without this script the
-     markup is a plain list of <audio> players.
+     One recording per instrument track, all from the same take, mixed live
+     with the Web Audio API so every lineup plays in sync. Each track runs
+     through its own gain node; switching an instrument in or out, or
+     soloing it, only ramps that gain, so nothing ever has to re-sync.
 
-     Each [data-min] group keeps at least that many players selected:
-     one string, one bass, two horns. That floor is the quartet.
+     Nothing downloads until the first press of play: then every track is
+     fetched and decoded, because Web Audio needs the whole clip in memory
+     to start the tracks together. Desktops get the full song (~25 MB);
+     touch devices get a 75-second excerpt (~7 MB). mix.json, fetched up
+     front, is small: the waveforms, the length, and the master level.
 
-     Switching: the incoming track starts silent, is nudged until it lines
-     up with the outgoing one, then crossfades in — or cuts in on iOS,
-     where volume is read-only and only muted works. */
+     Each [data-min] group keeps at least that many players switched on:
+     one string, one bass, two horns. Solo is for listening only; it
+     overrides the lineup without changing it. Without this script the
+     markup is a plain list of <audio> players. */
   const SIZES = ["", "Solo", "Duo", "Trio", "Quartet", "Quintet", "Sextet",
     "Septet", "Octet", "Nonet", "Tentet"];
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
 
   document.querySelectorAll("[data-mixer]").forEach((root) => {
-    const mixes = [...root.querySelectorAll("audio[data-players]")].map((el) => ({
-      el,
-      players: new Set(el.dataset.players.split(/\s+/)),
-    }));
-    if (!mixes.length) return;
+    if (!AudioCtx || !window.fetch) return;
 
-    const toggles = [...root.querySelectorAll("button[data-player]")];
+    // Every track is held decoded in memory at once: the full song is ~400 MB,
+    // fine on a desktop and enough to crash a phone, which gets the excerpt.
+    const conn = navigator.connection || {};
+    const small =
+      matchMedia("(pointer: coarse)").matches ||
+      (navigator.deviceMemory && navigator.deviceMemory < 4) ||
+      conn.saveData;
+    const mixUrl = (small && root.dataset.mixSmall) || root.dataset.mix;
+    const base = mixUrl.replace(/[^/]*$/, "");
+    const tracks = [...root.querySelectorAll(".mixer__track")].map((el) => ({
+      el,
+      id: el.dataset.track,
+      players: el.dataset.players.split(/\s+/),
+      on: el.querySelector(".mixer__chip").getAttribute("aria-pressed") === "true",
+      solo: false,
+      chip: el.querySelector(".mixer__chip"),
+      soloBtn: el.querySelector(".mixer__solo"),
+      canvas: el.querySelector(".mixer__wave"),
+      wave: [],
+      buffer: null,
+      gain: null,
+      source: null,
+    }));
     const groups = [...root.querySelectorAll("[data-min]")].map((el) => ({
       min: Number(el.dataset.min),
       need: el.dataset.need,
-      keys: new Set([...el.querySelectorAll("button[data-player]")].map((b) => b.dataset.player)),
+      tracks: tracks.filter((t) => el.contains(t.el)),
     }));
     const overlays = [...root.querySelectorAll(".mixer__off[data-player]")];
+    const hotspots = [...root.querySelectorAll(".mixer__hotspot")];
     const playBtn = root.querySelector(".mixer__play");
     const seek = root.querySelector(".mixer__seek");
     const elapsed = root.querySelector(".mixer__time");
@@ -226,227 +248,257 @@
     const size = root.querySelector(".mixer__size");
     const note = root.querySelector(".mixer__note");
 
-    // The starting lineup is whatever the markup marks pressed.
-    const selected = new Set(
-      root.querySelectorAll(".mixer__builder button[aria-pressed='true']").length
-        ? [...root.querySelectorAll(".mixer__builder button[aria-pressed='true']")].map((b) => b.dataset.player)
-        : mixes[0].players
-    );
-    let current = null;       // the recording of the selected lineup, if any
-    let live = null;          // the mix actually sounding, null when silent
-    let playing = false;      // the visitor wants sound
-    let position = 0;
-    let seq = 0;              // bumped by every action; stale async work checks it
-    let warning = "";
+    let duration = 0;
+    let master = 1;          // linear gain that keeps the whole band from clipping
+    let ctx = null;
+    let out = null;
+    let loading = null;      // promise, once the download has begun
+    let playing = false;     // the visitor wants sound
+    let started = 0;         // ctx time at which position 0 would have played
+    let paused = 0;          // position while stopped
+    let message = "";
 
-    const probe = new Audio();
-    probe.volume = 0.5;
-    const canFade = probe.volume === 0.5;
-
-    const same = (a, b) => a.size === b.size && [...a].every((p) => b.has(p));
-    const recordingOf = (lineup) => mixes.find((m) => same(m.players, lineup)) || null;
     const clock = (s) => {
-      if (!isFinite(s)) return "–:––";
+      if (!isFinite(s) || s < 0) return "–:––";
       s = Math.floor(s);
       return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
     };
-    const once = (el, type) =>
-      new Promise((res) => el.addEventListener(type, res, { once: true }));
-    // play() and "seeked" both resolve before the playhead is reliably
-    // moving, and it can stall again just after. Only a playhead that has
-    // run a good stretch past where it was is worth measuring drift against.
-    const steady = (el) =>
-      new Promise((res) => {
-        const from = el.currentTime;
-        const t0 = performance.now();
-        const id = setInterval(() => {
-          if (el.currentTime - from > 0.2 || performance.now() - t0 > 2000) {
-            clearInterval(id);
-            res();
-          }
-        }, 8);
-      });
+    const position = () =>
+      playing && ctx && tracks[0].source ? Math.min(duration, ctx.currentTime - started) : paused;
+    const anySolo = () => tracks.some((t) => t.solo);
+    const audible = (t) => (anySolo() ? t.solo : t.on);
+    const playerOn = (p) => tracks.some((t) => t.on && t.players.includes(p));
 
+    /* --- drawing --- */
+    const styles = getComputedStyle(root);
+    const draw = (t) => {
+      const c = t.canvas;
+      const w = c.clientWidth;
+      const h = c.clientHeight;
+      if (!w || !h || !t.wave.length) return;
+      const dpr = window.devicePixelRatio || 1;
+      if (c.width !== Math.round(w * dpr)) {
+        c.width = Math.round(w * dpr);
+        c.height = Math.round(h * dpr);
+      }
+      const g = c.getContext("2d");
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      g.clearRect(0, 0, w, h);
+      const played = duration ? (position() / duration) * w : 0;
+      const on = audible(t);
+      const bar = 2;
+      const step = 3;
+      const n = Math.floor(w / step);
+      for (let i = 0; i < n; i++) {
+        const v = t.wave[Math.floor((i / n) * t.wave.length)] / 100;
+        const bh = Math.max(1, v * h);
+        const x = i * step;
+        g.fillStyle = styles.getPropertyValue(
+          !on ? "--wave-off" : x < played ? "--wave-played" : "--wave-on"
+        );
+        g.fillRect(x, (h - bh) / 2, bar, bh);
+      }
+    };
+    const drawAll = () => tracks.forEach(draw);
+
+    let frame = 0;
+    const tick = () => {
+      const pos = position();
+      if (playing && pos >= duration && duration) {
+        // Reached the end of the excerpt.
+        stopSources();
+        playing = false;
+        paused = 0;
+        render();
+      }
+      elapsed.textContent = clock(position());
+      if (document.activeElement !== seek) seek.value = String(position());
+      drawAll();
+      frame = playing ? requestAnimationFrame(tick) : 0;
+    };
+    const kick = () => { if (!frame) frame = requestAnimationFrame(tick); };
+
+    /* --- state -> page --- */
     const render = () => {
-      for (const b of toggles) {
-        b.setAttribute("aria-pressed", String(selected.has(b.dataset.player)));
+      for (const t of tracks) {
+        t.chip.setAttribute("aria-pressed", String(t.on));
+        t.soloBtn.setAttribute("aria-pressed", String(t.solo));
+        t.el.dataset.audible = String(audible(t));
+        if (t.gain && ctx) t.gain.gain.setTargetAtTime(audible(t) ? 1 : 0, ctx.currentTime, 0.015);
       }
-      for (const img of overlays) {
-        img.dataset.visible = String(!selected.has(img.dataset.player));
-      }
-      size.textContent = SIZES[selected.size] || `${selected.size}-piece band`;
+      for (const h of hotspots) h.setAttribute("aria-pressed", String(playerOn(h.dataset.player)));
+      for (const img of overlays) img.dataset.visible = String(!playerOn(img.dataset.player));
+      const count = tracks.reduce((n, t) => n + (t.on ? t.players.length : 0), 0);
+      size.textContent = SIZES[count] || `${count}-piece band`;
+      const soloed = tracks.filter((t) => t.solo).map((t) => t.chip.textContent.trim());
       note.textContent =
-        warning || (current ? "" : "We haven’t recorded this lineup yet.");
-      playBtn.disabled = !current && !playing;
+        message || (soloed.length ? `Solo: ${soloed.join(", ")}. Turn solo off to hear the lineup.` : "");
       playBtn.setAttribute("aria-label", playing ? "Pause" : "Play");
       root.dataset.playing = String(playing);
+      root.dataset.solo = String(soloed.length > 0);
+      drawAll();
     };
 
-    const showTime = () => {
-      elapsed.textContent = clock(position);
-      if (document.activeElement !== seek) seek.value = String(position);
-    };
-
-    // Everything but the sounding mix stops, at full volume for next time.
-    const settle = () => {
-      for (const m of mixes) {
-        m.el.volume = 1;
-        m.el.muted = false;
-        if (m !== live) m.el.pause();
-      }
-    };
-
-    const fade = (from, to, ms, token) =>
-      new Promise((res) => {
-        const t0 = performance.now();
-        const id = setInterval(() => {
-          let k = Math.min(1, (performance.now() - t0) / ms);
-          if (token !== seq) k = 1;
-          from.volume = 1 - k;
-          to.volume = k;
-          if (k === 1) { clearInterval(id); res(); }
-        }, 16);
-      });
-
-    const start = () => {
-      const token = ++seq;
-      live = current;
-      settle();
-      current.el.currentTime = position;
-      current.el.play().catch(() => {
-        if (token !== seq) return;
-        playing = false;
-        live = null;
+    /* --- audio --- */
+    const load = () =>
+      (loading ||= (async () => {
+        let done = 0;
+        message = `Loading the band… 0 of ${tracks.length}`;
         render();
-      });
-    };
+        await Promise.all(
+          tracks.map(async (t) => {
+            const res = await fetch(`${base}${t.id}.mp3`);
+            if (!res.ok) throw new Error(`${t.id}: ${res.status}`);
+            const data = await res.arrayBuffer();
+            t.buffer = await new Promise((ok, fail) => ctx.decodeAudioData(data, ok, fail));
+            t.gain = ctx.createGain();
+            t.gain.gain.value = audible(t) ? 1 : 0;
+            t.gain.connect(out);
+            message = `Loading the band… ${++done} of ${tracks.length}`;
+            render();
+          })
+        );
+        message = "";
+      })());
 
-    const silence = () => {
-      ++seq;
-      if (live) position = live.el.currentTime;
-      live = null;
-      settle();
-    };
-
-    // How far ahead to aim a seek so the track is in step once it is
-    // actually moving again. Learned from each correction and kept, so after
-    // the first switch most land in one go.
-    let lead = 0;
-
-    // Called synchronously from the click, so play() keeps the user gesture.
-    const swap = (from, to) => {
-      const token = ++seq;
-      // Silence it with volume where we can: Chrome stalls an element for a
-      // few tens of ms when it is unmuted, which would undo the alignment.
-      if (canFade) to.el.volume = 0;
-      else to.el.muted = true;
-      to.el.currentTime = from.el.currentTime + lead;
-      const begun = to.el.play();
-      (async () => {
-        try { await begun; } catch { return; }
-        await steady(to.el);
-        for (let i = 0; i < 4 && token === seq; i++) {
-          const drift = from.el.currentTime - to.el.currentTime;
-          if (Math.abs(drift) < 0.015) break;
-          lead = Math.min(0.5, Math.max(0, lead + drift));
-          to.el.currentTime = from.el.currentTime + lead;
-          await once(to.el, "seeked");
-          await steady(to.el);
-        }
-        if (token !== seq) return;
-        live = to;
-        if (canFade) await fade(from.el, to.el, 160, token);
-        else to.el.muted = false;
-        if (token !== seq) return;
-        settle();
-      })();
-    };
-
-    // Make the sound follow the selected lineup.
-    const follow = () => {
-      current = recordingOf(selected);
-      if (playing) {
-        if (!current) silence();
-        else if (!live) start();
-        else if (live !== current) swap(live, current);
-        else { ++seq; settle(); }
+    const stopSources = () => {
+      for (const t of tracks) {
+        if (!t.source) continue;
+        t.source.onended = null;
+        try { t.source.stop(); } catch {}
+        t.source.disconnect();
+        t.source = null;
       }
+    };
+
+    // Every track starts on the same scheduled instant: that is what keeps
+    // them in sync, to the sample.
+    const startSources = (from) => {
+      stopSources();
+      const at = ctx.currentTime + 0.05;
+      for (const t of tracks) {
+        t.source = ctx.createBufferSource();
+        t.source.buffer = t.buffer;
+        t.source.connect(t.gain);
+        t.source.start(at, from);
+      }
+      started = at - from;
+    };
+
+    const play = async () => {
+      if (!ctx) {
+        ctx = new AudioCtx();
+        out = ctx.createGain();
+        out.gain.value = master;
+        out.connect(ctx.destination);
+        // iOS: let the mixer play with the ringer switch off, like a video would.
+        try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch {}
+      }
+      ctx.resume();
+      try {
+        await load();
+      } catch {
+        loading = null;
+        playing = false;
+        message = "The recordings didn’t load. Check your connection and press play again.";
+        render();
+        return;
+      }
+      if (!playing) return;   // paused while it was loading
+      startSources(paused >= duration ? 0 : paused);
+      render();
+      kick();
+    };
+
+    const pause = () => {
+      paused = position();
+      stopSources();
       render();
     };
 
-    const toggle = (key) => {
-      warning = "";
-      if (selected.has(key)) {
-        const group = groups.find((g) => g.keys.has(key));
-        const left = group ? [...group.keys].filter((k) => selected.has(k)).length : Infinity;
-        if (group && left <= group.min) {
-          warning = `A lineup needs at least ${group.need}.`;
-          render();
-          return;
-        }
-        selected.delete(key);
-      } else {
-        selected.add(key);
-      }
-      follow();
+    const seekTo = (s) => {
+      paused = Math.max(0, Math.min(duration, s));
+      if (playing && tracks[0].source) startSources(paused);
+      elapsed.textContent = clock(paused);
+      drawAll();
     };
 
-    for (const m of mixes) {
-      m.el.controls = false;
-      m.el.addEventListener("loadedmetadata", () => {
-        seek.max = String(m.el.duration);
-        total.textContent = clock(m.el.duration);
-      });
-      m.el.addEventListener("timeupdate", () => {
-        if (m !== live) return;
-        position = m.el.currentTime;
-        showTime();
-      });
-      m.el.addEventListener("ended", () => {
-        if (m !== live) return;
-        playing = false;
-        live = null;
-        position = 0;
-        settle();
-        showTime();
+    /* --- controls --- */
+    const toggle = (t) => {
+      message = "";
+      if (t.on) {
+        const group = groups.find((g) => g.tracks.includes(t));
+        if (group) {
+          const left = group.tracks.reduce((n, o) => n + (o.on && o !== t ? o.players.length : 0), 0);
+          if (left < group.min) {
+            message = `A lineup needs at least ${group.need}.`;
+            render();
+            return;
+          }
+        }
+      }
+      t.on = !t.on;
+      render();
+    };
+
+    for (const t of tracks) {
+      t.chip.addEventListener("click", () => toggle(t));
+      t.soloBtn.addEventListener("click", () => {
+        message = "";
+        t.solo = !t.solo;
         render();
       });
-      // Paused from outside the page — headphones, lock screen.
-      m.el.addEventListener("pause", () => {
-        if (m !== live || !playing || m.el.ended) return;
-        playing = false;
-        silence();
-        render();
+      // Click or drag on any waveform to move through the tune.
+      const scrub = (e) => {
+        const r = t.canvas.getBoundingClientRect();
+        seekTo(((e.clientX - r.left) / r.width) * duration);
+      };
+      t.canvas.addEventListener("pointerdown", (e) => {
+        if (!duration) return;
+        t.canvas.setPointerCapture(e.pointerId);
+        scrub(e);
+        t.canvas.onpointermove = scrub;
       });
+      t.canvas.addEventListener("pointerup", () => (t.canvas.onpointermove = null));
     }
-    if (mixes[0].el.readyState >= 1) {
-      seek.max = String(mixes[0].el.duration);
-      total.textContent = clock(mixes[0].el.duration);
+    for (const h of hotspots) {
+      h.addEventListener("click", () => {
+        const t = tracks.find((o) => o.players.includes(h.dataset.player));
+        if (t) toggle(t);
+      });
     }
 
     playBtn.addEventListener("click", () => {
-      playing = !playing;
-      if (playing && current) start();
-      else silence();
+      if (playing) {
+        pause();          // reads the position, so before playing flips
+        playing = false;
+      } else {
+        playing = true;
+        play();
+      }
       render();
     });
 
-    seek.addEventListener("input", () => {
-      position = Number(seek.value);
-      elapsed.textContent = clock(position);
-      if (live) live.el.currentTime = position;
-    });
+    seek.addEventListener("input", () => seekTo(Number(seek.value)));
 
-    for (const b of toggles) {
-      b.addEventListener("click", () => toggle(b.dataset.player));
-    }
+    addEventListener("resize", drawAll);
 
-    root.querySelector(".mixer__tracks").hidden = true;
-    root.querySelector(".mixer__builder").hidden = false;
-    root.querySelector(".mixer__deck").hidden = false;
-    root.querySelectorAll(".mixer__hotspot").forEach((h) => (h.hidden = false));
-    root.dataset.ready = "true";
-    follow();
+    fetch(mixUrl)
+      .then((r) => r.json())
+      .then((mix) => {
+        duration = mix.duration;
+        master = Math.pow(10, mix.gainDb / 20);
+        for (const t of tracks) t.wave = mix.waves[t.id] || [];
+        seek.max = String(duration);
+        total.textContent = clock(duration);
+        root.querySelector(".mixer__tracks").hidden = true;
+        root.querySelector(".mixer__builder").hidden = false;
+        root.querySelector(".mixer__deck").hidden = false;
+        hotspots.forEach((h) => (h.hidden = false));
+        root.dataset.ready = "true";
+        render();
+      })
+      .catch(() => {});   // leave the plain track list in place
   });
 
   /* --- Ambient background video ---------------------------------------

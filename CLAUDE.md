@@ -214,8 +214,8 @@ per-page notes. Read it before any non-trivial change.
   Elementor markup — is committed. It alarmed Ben on sight; worth knowing it is
   inert reference data that `build.py` never reads (zero references, verified).
   Offered to strip it from the repo; he left it in. Still fair game to remove.
-- The **A/B audio player** idea was built (Oct 2026) as the band mixer on the
-  Configurations page — see README "Band mixer". The recording discipline
-  still applies to every new mix: same tune, same take, one variable changed.
-  `_source/mixer.py` handles loudness matching; if the audio ever grows past a
-  few GB, move it to R2.
+- The **A/B audio player** idea grew into a multitrack band mixer on the
+  Configurations page (Oct 2026) — see README "Band mixer". Separate
+  instrument tracks of one take, mixed live with Web Audio. Desktops get the
+  full song, touch devices a 75 s excerpt (memory). `_source/mixer.py` makes
+  both. If audio ever grows past a few GB, move it to R2.
