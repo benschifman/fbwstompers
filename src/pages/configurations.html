@@ -73,68 +73,72 @@ schema: band
 
   <!-- ===== Band mixer =====
        Each <audio> is one recording of the same take, and data-players lists
-       who is on it. Tapping a player looks for the mix with exactly that
-       player added or removed; if there isn't one, that toggle is disabled.
-       So adding a recording is: add an <audio>, plus a .mixer__off overlay
-       and a hotspot/chip for any newly switchable player. Media is prepared
-       by `python3 _source/mixer.py` — see that file. Without JS, the plain
-       track list below is what visitors get. -->
+       who is on it. The visitor builds a lineup from the buttons; when it
+       matches a recording's data-players exactly, that recording plays, and
+       otherwise the mixer says it isn't recorded yet. Adding a recording is
+       just adding an <audio>; a player who should black out in the art also
+       needs a .mixer__off overlay (and optionally a .mixer__hotspot). Media is
+       prepared by `python3 _source/mixer.py` — see that file. Without JS, the
+       plain track list below is what visitors get. -->
   <section class="section section--paper" id="hear-the-difference">
     <div class="wrap">
       <div class="section-head">
         <p class="eyebrow">Hear the difference</p>
-        <h2>Take a player out of the band</h2>
-        <p class="lede">Press play, then tap a player to drop them out or bring them back. The tune keeps
-          going, so you hear exactly what that one instrument adds.</p>
+        <h2>Build your band</h2>
+        <p class="lede">Build a band from the buttons, or tap a player in the picture, then press play. Change
+          the lineup mid-song and the tune keeps going, so you hear exactly what each instrument adds.</p>
       </div>
 
       <div class="mixer" data-mixer>
-        <!-- Lineup presets. Each selects the recording whose data-players is
-             exactly its data-players; with no such recording it shows disabled.
-             Lineups are as Ben specified, Oct 2026. -->
-        <div class="mixer__lineups" hidden>
-          <div class="mixer__lineup" role="group" aria-label="Quartet">
-            <span class="mixer__lineup-name">Quartet</span>
-            <div class="mixer__lineup-options">
-              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet banjo tuba" aria-label="Quartet with banjo and tuba">Banjo &amp; tuba</button>
-              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet guitar tuba" aria-label="Quartet with guitar and tuba">Guitar &amp; tuba</button>
-              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet banjo bass" aria-label="Quartet with banjo and string bass">Banjo &amp; string bass</button>
-              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet guitar bass" aria-label="Quartet with guitar and string bass">Guitar &amp; string bass</button>
+        <!-- Lineup builder. The buttons marked aria-pressed="true" are the
+             starting lineup. data-min is the fewest a group may drop to (one
+             string, one bass, two horns: the quartet); data-need finishes the
+             sentence "A lineup needs at least …". Lineups as Ben specified,
+             Oct 2026. -->
+        <div class="mixer__builder" hidden>
+          <p class="mixer__size" aria-live="polite">Quartet</p>
+          <div class="mixer__group" role="group" aria-labelledby="mixer-strings" data-min="1" data-need="one string instrument">
+            <span class="mixer__group-name" id="mixer-strings">Strings</span>
+            <div class="mixer__group-options">
+              <button class="mixer__chip" type="button" data-player="banjo" aria-pressed="true">Banjo</button>
+              <button class="mixer__chip" type="button" data-player="guitar" aria-pressed="false">Guitar</button>
             </div>
           </div>
-          <div class="mixer__lineup" role="group" aria-label="Quintet">
-            <span class="mixer__lineup-name">Quintet</span>
-            <div class="mixer__lineup-options">
-              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet drums banjo tuba" aria-label="Quintet with banjo and tuba">Banjo &amp; tuba</button>
-              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet drums guitar tuba" aria-label="Quintet with guitar and tuba">Guitar &amp; tuba</button>
-              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet drums banjo bass" aria-label="Quintet with banjo and string bass">Banjo &amp; string bass</button>
-              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet drums guitar bass" aria-label="Quintet with guitar and string bass">Guitar &amp; string bass</button>
+          <div class="mixer__group" role="group" aria-labelledby="mixer-bass" data-min="1" data-need="one bass instrument">
+            <span class="mixer__group-name" id="mixer-bass">Bass</span>
+            <div class="mixer__group-options">
+              <button class="mixer__chip" type="button" data-player="tuba" aria-pressed="true">Tuba</button>
+              <button class="mixer__chip" type="button" data-player="bass" aria-pressed="false">String bass</button>
             </div>
           </div>
-          <div class="mixer__lineup" role="group" aria-label="Sextet with trombone">
-            <span class="mixer__lineup-name">Sextet + trombone</span>
-            <div class="mixer__lineup-options">
-              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet drums trombone banjo tuba" aria-label="Sextet with trombone with banjo and tuba">Banjo &amp; tuba</button>
-              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet drums trombone guitar tuba" aria-label="Sextet with trombone with guitar and tuba">Guitar &amp; tuba</button>
-              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet drums trombone banjo bass" aria-label="Sextet with trombone with banjo and string bass">Banjo &amp; string bass</button>
-              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet drums trombone guitar bass" aria-label="Sextet with trombone with guitar and string bass">Guitar &amp; string bass</button>
+          <div class="mixer__group" role="group" aria-labelledby="mixer-horns" data-min="2" data-need="two horns">
+            <span class="mixer__group-name" id="mixer-horns">Horns</span>
+            <div class="mixer__group-options">
+              <button class="mixer__chip" type="button" data-player="trumpet" aria-pressed="true">Trumpet</button>
+              <button class="mixer__chip" type="button" data-player="clarinet" aria-pressed="true">Clarinet</button>
+              <button class="mixer__chip" type="button" data-player="trombone" aria-pressed="false">Trombone</button>
             </div>
           </div>
-          <div class="mixer__lineup" role="group" aria-label="Sextet with piano">
-            <span class="mixer__lineup-name">Sextet + piano</span>
-            <div class="mixer__lineup-options">
-              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet drums piano banjo tuba" aria-label="Sextet with piano with banjo and tuba">Banjo &amp; tuba</button>
-              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet drums piano guitar tuba" aria-label="Sextet with piano with guitar and tuba">Guitar &amp; tuba</button>
-              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet drums piano banjo bass" aria-label="Sextet with piano with banjo and string bass">Banjo &amp; string bass</button>
-              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet drums piano guitar bass" aria-label="Sextet with piano with guitar and string bass">Guitar &amp; string bass</button>
+          <div class="mixer__group" role="group" aria-labelledby="mixer-keys">
+            <span class="mixer__group-name" id="mixer-keys">Keys</span>
+            <div class="mixer__group-options">
+              <button class="mixer__chip" type="button" data-player="piano" aria-pressed="false">Piano</button>
             </div>
           </div>
-          <div class="mixer__lineup" role="group" aria-label="Full band">
-            <span class="mixer__lineup-name">Full band</span>
-            <div class="mixer__lineup-options">
-              <button class="mixer__preset" type="button" data-preset data-players="trumpet clarinet trombone banjo guitar tuba bass drums piano" aria-label="Full band, everyone in the picture">Everyone in the picture</button>
+          <div class="mixer__group" role="group" aria-labelledby="mixer-drums">
+            <span class="mixer__group-name" id="mixer-drums">Drums</span>
+            <div class="mixer__group-options">
+              <button class="mixer__chip" type="button" data-player="drums" aria-pressed="false">Drum kit</button>
             </div>
           </div>
+          <div class="mixer__group" role="group" aria-labelledby="mixer-vocals">
+            <span class="mixer__group-name" id="mixer-vocals">Vocals</span>
+            <div class="mixer__group-options">
+              <button class="mixer__chip" type="button" data-player="vocals-male" aria-pressed="false" aria-label="Male vocals">Male</button>
+              <button class="mixer__chip" type="button" data-player="vocals-female" aria-pressed="false" aria-label="Female vocals">Female</button>
+            </div>
+          </div>
+          <p class="mixer__note" aria-live="polite"></p>
         </div>
 
         <div class="mixer__stage">
@@ -145,7 +149,7 @@ schema: band
                  width="1024" height="683" loading="lazy" decoding="async">
           </picture>
           <img class="mixer__off" data-player="bass" src="/assets/img/mixer/bass-off.webp" alt="" width="296" height="557" loading="lazy" decoding="async" style="left:16.21%;top:0.49%;width:19.27%">
-          <button class="mixer__hotspot" type="button" data-player="bass" tabindex="-1" aria-hidden="true" hidden
+          <button class="mixer__hotspot" type="button" data-player="bass" tabindex="-1" aria-hidden="true" aria-pressed="false" hidden
                   style="--x:17.3%;--y:1.5%;--w:15.6%;--h:34.6%"></button>
         </div>
 
@@ -159,21 +163,15 @@ schema: band
           <span class="mixer__time mixer__duration">&ndash;:&ndash;&ndash;</span>
         </div>
 
-        <div class="mixer__players" role="group" aria-label="Players" hidden>
-          <span class="mixer__players-label">Players</span>
-          <button class="mixer__chip" type="button" data-player="bass" aria-pressed="true">String bass</button>
-          <p class="mixer__now" aria-live="polite"></p>
-        </div>
-
         <ul class="mixer__tracks">
           <li>
-            <span>Tuba and string bass</span>
-            <audio controls preload="metadata" data-players="bass tuba piano drums guitar banjo" data-label="Tuba and string bass"
+            <span>Full band, with string bass</span>
+            <audio controls preload="metadata" data-players="trumpet clarinet trombone banjo guitar tuba bass piano drums"
                    src="/assets/audio/when-bass-piano-drums-guitar-banjo-multi-tuba.mp3"></audio>
           </li>
           <li>
-            <span>Tuba, no string bass</span>
-            <audio controls preload="none" data-players="tuba piano drums guitar banjo" data-label="Tuba, no string bass"
+            <span>Full band, without string bass</span>
+            <audio controls preload="none" data-players="trumpet clarinet trombone banjo guitar tuba piano drums"
                    src="/assets/audio/when-piano-drums-guitar-banjo-multi-tuba.mp3"></audio>
           </li>
         </ul>

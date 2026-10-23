@@ -190,49 +190,61 @@
 
   /* --- Band mixer (configurations) ------------------------------------
      Several recordings of the same take, each with a different lineup.
-     Tapping a player switches to the recording with exactly that player
-     added or removed, at the same point in the song. Without this script
-     the markup is a plain list of <audio> players.
+     Visitors build a lineup from the instrument buttons (or by tapping
+     players in the art); whenever it matches a recording exactly, that
+     recording plays from the same point in the song. Lineups nobody has
+     recorded yet stop the sound and say so. Without this script the
+     markup is a plain list of <audio> players.
 
-     Switching: the incoming track starts muted (muted works on iOS, where
-     volume is read-only), is nudged until it lines up with the outgoing
-     one, then crossfades in — or cuts in where volume can't be set. */
+     Each [data-min] group keeps at least that many players selected:
+     one string, one bass, two horns. That floor is the quartet.
+
+     Switching: the incoming track starts silent, is nudged until it lines
+     up with the outgoing one, then crossfades in — or cuts in on iOS,
+     where volume is read-only and only muted works. */
+  const SIZES = ["", "Solo", "Duo", "Trio", "Quartet", "Quintet", "Sextet",
+    "Septet", "Octet", "Nonet", "Tentet"];
+
   document.querySelectorAll("[data-mixer]").forEach((root) => {
     const mixes = [...root.querySelectorAll("audio[data-players]")].map((el) => ({
       el,
       players: new Set(el.dataset.players.split(/\s+/)),
-      label: el.dataset.label || "",
     }));
-    if (mixes.length < 2) return;
+    if (!mixes.length) return;
 
     const toggles = [...root.querySelectorAll("button[data-player]")];
-    const presets = [...root.querySelectorAll("button[data-preset]")].map((el) => ({
-      el,
-      players: new Set(el.dataset.players.split(/\s+/)),
+    const groups = [...root.querySelectorAll("[data-min]")].map((el) => ({
+      min: Number(el.dataset.min),
+      need: el.dataset.need,
+      keys: new Set([...el.querySelectorAll("button[data-player]")].map((b) => b.dataset.player)),
     }));
     const overlays = [...root.querySelectorAll(".mixer__off[data-player]")];
     const playBtn = root.querySelector(".mixer__play");
     const seek = root.querySelector(".mixer__seek");
     const elapsed = root.querySelector(".mixer__time");
     const total = root.querySelector(".mixer__duration");
-    const now = root.querySelector(".mixer__now");
+    const size = root.querySelector(".mixer__size");
+    const note = root.querySelector(".mixer__note");
 
-    let current = mixes[0];   // the lineup selected
-    let live = null;          // the mix actually sounding, null when stopped
-    let playing = false;
+    // The starting lineup is whatever the markup marks pressed.
+    const selected = new Set(
+      root.querySelectorAll(".mixer__builder button[aria-pressed='true']").length
+        ? [...root.querySelectorAll(".mixer__builder button[aria-pressed='true']")].map((b) => b.dataset.player)
+        : mixes[0].players
+    );
+    let current = null;       // the recording of the selected lineup, if any
+    let live = null;          // the mix actually sounding, null when silent
+    let playing = false;      // the visitor wants sound
     let position = 0;
     let seq = 0;              // bumped by every action; stale async work checks it
+    let warning = "";
 
     const probe = new Audio();
     probe.volume = 0.5;
     const canFade = probe.volume === 0.5;
 
     const same = (a, b) => a.size === b.size && [...a].every((p) => b.has(p));
-    const toggled = (key) => {
-      const want = new Set(current.players);
-      if (!want.delete(key)) want.add(key);
-      return mixes.find((m) => same(m.players, want));
-    };
+    const recordingOf = (lineup) => mixes.find((m) => same(m.players, lineup)) || null;
     const clock = (s) => {
       if (!isFinite(s)) return "–:––";
       s = Math.floor(s);
@@ -257,22 +269,17 @@
 
     const render = () => {
       for (const b of toggles) {
-        const key = b.dataset.player;
-        b.setAttribute("aria-pressed", String(current.players.has(key)));
-        b.disabled = !toggled(key);
-      }
-      for (const p of presets) {
-        const mix = mixes.find((m) => same(m.players, p.players));
-        p.el.disabled = !mix;
-        p.el.title = mix ? "" : "No recording of this lineup yet";
-        p.el.setAttribute("aria-pressed", String(mix === current));
+        b.setAttribute("aria-pressed", String(selected.has(b.dataset.player)));
       }
       for (const img of overlays) {
-        img.dataset.visible = String(!current.players.has(img.dataset.player));
+        img.dataset.visible = String(!selected.has(img.dataset.player));
       }
+      size.textContent = SIZES[selected.size] || `${selected.size}-piece band`;
+      note.textContent =
+        warning || (current ? "" : "We haven’t recorded this lineup yet.");
+      playBtn.disabled = !current && !playing;
       playBtn.setAttribute("aria-label", playing ? "Pause" : "Play");
       root.dataset.playing = String(playing);
-      if (now) now.textContent = `Now: ${current.label}`;
     };
 
     const showTime = () => {
@@ -314,14 +321,13 @@
       });
     };
 
-    const stop = () => {
+    const silence = () => {
       ++seq;
       if (live) position = live.el.currentTime;
       live = null;
       settle();
     };
 
-    // Called synchronously from the click, so play() keeps the user gesture.
     // How far ahead to aim a seek so the track is in step once it is
     // actually moving again. Learned from each correction and kept, so after
     // the first switch most land in one go.
@@ -356,12 +362,33 @@
       })();
     };
 
-    const choose = (next) => {
-      if (!next || next === current) return;
-      current = next;
-      if (playing && live && live !== current) swap(live, current);
-      else if (playing && live === current) { ++seq; settle(); }
+    // Make the sound follow the selected lineup.
+    const follow = () => {
+      current = recordingOf(selected);
+      if (playing) {
+        if (!current) silence();
+        else if (!live) start();
+        else if (live !== current) swap(live, current);
+        else { ++seq; settle(); }
+      }
       render();
+    };
+
+    const toggle = (key) => {
+      warning = "";
+      if (selected.has(key)) {
+        const group = groups.find((g) => g.keys.has(key));
+        const left = group ? [...group.keys].filter((k) => selected.has(k)).length : Infinity;
+        if (group && left <= group.min) {
+          warning = `A lineup needs at least ${group.need}.`;
+          render();
+          return;
+        }
+        selected.delete(key);
+      } else {
+        selected.add(key);
+      }
+      follow();
     };
 
     for (const m of mixes) {
@@ -388,7 +415,7 @@
       m.el.addEventListener("pause", () => {
         if (m !== live || !playing || m.el.ended) return;
         playing = false;
-        stop();
+        silence();
         render();
       });
     }
@@ -399,8 +426,8 @@
 
     playBtn.addEventListener("click", () => {
       playing = !playing;
-      if (playing) start();
-      else stop();
+      if (playing && current) start();
+      else silence();
       render();
     });
 
@@ -411,22 +438,15 @@
     });
 
     for (const b of toggles) {
-      b.addEventListener("click", () => choose(toggled(b.dataset.player)));
-    }
-    for (const p of presets) {
-      p.el.addEventListener("click", () =>
-        choose(mixes.find((m) => same(m.players, p.players)))
-      );
+      b.addEventListener("click", () => toggle(b.dataset.player));
     }
 
     root.querySelector(".mixer__tracks").hidden = true;
+    root.querySelector(".mixer__builder").hidden = false;
     root.querySelector(".mixer__deck").hidden = false;
-    root.querySelector(".mixer__players").hidden = false;
-    const lineups = root.querySelector(".mixer__lineups");
-    if (lineups) lineups.hidden = false;
     root.querySelectorAll(".mixer__hotspot").forEach((h) => (h.hidden = false));
     root.dataset.ready = "true";
-    render();
+    follow();
   });
 
   /* --- Ambient background video ---------------------------------------

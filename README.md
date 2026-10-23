@@ -286,16 +286,27 @@ highlighting the parent, matching how `about.html` behaves.
 
 ## Band mixer (configurations page)
 
-`/about/configurations/#hear-the-difference` — a band illustration plus a
-player. Visitors press play, then tap a player (or the chip under the art) to
-take them out of the band or bring them back. The song keeps playing: the
-player switches to another recording of **the same take** at the same point.
+`/about/configurations/#hear-the-difference` — a lineup builder, a band
+illustration, and a player. Visitors build a band from instrument buttons
+grouped as Strings (banjo, guitar), Bass (tuba, string bass), Horns (trumpet,
+clarinet, trombone), Keys (piano), Drums (drum kit) and Vocals (male, female),
+or by tapping a player in the art. It starts as a quartet — banjo, tuba,
+trumpet, clarinet — and the heading above the buttons names the size as it
+changes (Quartet, Quintet, Sextet …). Every group can be emptied except
+Strings and Bass (at least one each) and Horns (at least two): that floor is
+the quartet. The rules live in the markup as `data-min` on each group.
 
-**How a toggle finds its recording.** Each `<audio>` in the mixer carries
-`data-players` — who is on that recording. Tapping a player looks for the
-recording whose set is exactly the current one with that player added or
-removed. If none exists, that toggle is disabled. So the illustration and the
-recordings are independent; adding a lineup is just adding an `<audio>`.
+**How the sound follows the lineup.** Each `<audio>` in the mixer carries
+`data-players` — who is on that recording. Whenever the selected lineup
+matches one exactly, that recording plays, picking up at the same point in the
+song (it's the same take). Any other lineup fades to silence with "We haven't
+recorded this lineup yet", and playback resumes when the visitor lands on a
+recorded one. So adding a lineup is just adding an `<audio>`.
+
+The two current recordings are the full band (all nine players in the art),
+with and without string bass, so only the octet and nonet play today. Player
+keys: `banjo guitar tuba bass trumpet clarinet trombone piano drums
+vocals-male vocals-female`.
 
 **Adding a recording / a switchable player:**
 
@@ -309,9 +320,9 @@ python3 _source/mixer.py     # needs ffmpeg; prints the overlay <img> line
 ```
 
 Then in `src/pages/configurations.html`: an `<audio>` with its
-`data-players`, and for a new player the printed `.mixer__off` overlay, a
-`.mixer__hotspot` (position as `--x/--y/--w/--h` in % of the art) and a
-`.mixer__chip`.
+`data-players`, and for a player who should black out in the art the printed
+`.mixer__off` overlay, plus optionally a `.mixer__hotspot` (position as
+`--x/--y/--w/--h` in % of the art) to make them tappable.
 
 `_source/mixer.py` does two things:
 
@@ -328,13 +339,6 @@ up with the outgoing one (measured headless: within ~20–40 ms), then
 crossfades in over 160 ms. iOS ignores `volume`, so there it uses `muted` and
 cuts instead of fading. Only the first mix preloads metadata (for the
 duration); the others load on first switch.
-
-**Lineup buttons.** Above the art, one row per size (quartet = trumpet,
-clarinet, rhythm, bass; quintet adds drums; two sextets add trombone or piano;
-full band is everyone in the picture), with a button per rhythm/bass pairing.
-Each `.mixer__preset` selects the recording whose `data-players` is exactly its
-own, and shows greyed out until such a recording exists. Player keys used:
-`trumpet clarinet trombone banjo guitar tuba bass drums piano`.
 
 Without JS the mixer is the art plus a plain list of `<audio controls>`.
 
