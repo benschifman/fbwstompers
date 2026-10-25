@@ -24,9 +24,9 @@ plus the length and a waveform outline per track for the page to draw.
 
 OVERLAYS — assets/img/mixer/orig/<player>-off.* -> assets/img/mixer/<player>-off.webp
 
-Each source is the full band illustration (assets/img/orig/band-mixer.*) with
-one player blacked out, and nothing else changed. The script keeps only the
-pixels that differ from the base, feathers the edge, and crops to them, so each
+Each source is the full band illustration (assets/img/orig/band-mixer.png) with
+one player grayed out, and nothing else changed. The script keeps only the
+pixels that differ from the base and crops to them, so each
 player's "off" state is a small transparent patch laid over the one base image.
 That way players toggle independently: no image per combination.
 
@@ -34,7 +34,7 @@ It prints the <img> line for each overlay, with its position as percentages
 of the base image, ready to paste into src/pages/configurations.html.
 """
 
-from PIL import Image, ImageChops, ImageFilter
+from PIL import Image, ImageChops
 import os, re, subprocess, sys
 
 AUDIO_SRC = 'assets/audio/stems/orig'
@@ -49,11 +49,12 @@ BITRATE = {1: '96k', 2: '160k'}
 PEAK_TARGET_DB = -1.0
 WAVE_BINS = 480         # waveform resolution; the page scales it to fit
 
-BASE = 'assets/img/orig/band-mixer.webp'
+BASE = 'assets/img/orig/band-mixer.png'
 OVERLAY_SRC = 'assets/img/mixer/orig'
 OVERLAY_OUT = 'assets/img/mixer'
-DIFF_THRESHOLD = 30   # per-pixel difference that counts as "changed" (0-255);
-                      # below this is just compression noise between the two
+DIFF_THRESHOLD = 0    # per-pixel difference that counts as "changed" (0-255).
+                      # The Photopea exports are lossless and identical outside
+                      # the grayed player, so any difference at all is real.
 
 
 def slugify(stem: str) -> str:
@@ -139,10 +140,10 @@ def overlays():
 
         diff = ImageChops.difference(base, off).convert('L')
         mask = diff.point(lambda v: 255 if v > DIFF_THRESHOLD else 0)
-        # Open (drop isolated noise pixels), then grow and soften the edge so
-        # the patch blends into the base rather than showing a hard outline.
-        mask = mask.filter(ImageFilter.MinFilter(3)).filter(ImageFilter.MaxFilter(3))
-        mask = mask.filter(ImageFilter.MaxFilter(9)).filter(ImageFilter.GaussianBlur(3))
+        # No feathering: the patch carries exactly the pixels the export
+        # changed, so one patch over the base reproduces that export exactly.
+        # (Grow or blur it and the edge drags in neighbors' full-color pixels,
+        # which show as a halo where two grayed players overlap.)
         box = mask.getbbox()
         if not box:
             raise SystemExit(f'{fn}: no difference from the base image')

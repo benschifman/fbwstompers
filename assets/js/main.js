@@ -240,7 +240,7 @@
       tracks: tracks.filter((t) => el.contains(t.el)),
     }));
     const overlays = [...root.querySelectorAll(".mixer__off[data-player]")];
-    const hotspots = [...root.querySelectorAll(".mixer__hotspot")];
+    const stage = root.querySelector(".mixer__stage");
     const playBtn = root.querySelector(".mixer__play");
     const seek = root.querySelector(".mixer__seek");
     const elapsed = root.querySelector(".mixer__time");
@@ -326,7 +326,6 @@
         t.el.dataset.audible = String(audible(t));
         if (t.gain && ctx) t.gain.gain.setTargetAtTime(audible(t) ? 1 : 0, ctx.currentTime, 0.015);
       }
-      for (const h of hotspots) h.setAttribute("aria-pressed", String(playerOn(h.dataset.player)));
       for (const img of overlays) img.dataset.visible = String(!playerOn(img.dataset.player));
       const count = tracks.reduce((n, t) => n + (t.on ? t.players.length : 0), 0);
       size.textContent = SIZES[count] || `${count}-piece band`;
@@ -461,12 +460,51 @@
       });
       t.canvas.addEventListener("pointerup", () => (t.canvas.onpointermove = null));
     }
-    for (const h of hotspots) {
-      h.addEventListener("click", () => {
-        const t = tracks.find((o) => o.players.includes(h.dataset.player));
-        if (t) toggle(t);
-      });
-    }
+    // Tapping the art. Each overlay's alpha is exactly that player's shape
+    // (the pixels the grayed export changed), so it doubles as a
+    // pixel-accurate hit map, whether or not the overlay is showing.
+    const hitMaps = new Map();
+    const alphaOf = (img) => {
+      if (hitMaps.has(img)) return hitMaps.get(img);
+      if (!img.complete || !img.naturalWidth) return null;
+      const c = document.createElement("canvas");
+      c.width = img.naturalWidth;
+      c.height = img.naturalHeight;
+      const g = c.getContext("2d");
+      g.drawImage(img, 0, 0);
+      let data = null;
+      try { data = g.getImageData(0, 0, c.width, c.height).data; } catch {}
+      hitMaps.set(img, data);
+      return data;
+    };
+    const playerAt = (e) => {
+      for (const img of overlays) {
+        const r = img.getBoundingClientRect();
+        const x = Math.floor(((e.clientX - r.left) / r.width) * img.naturalWidth);
+        const y = Math.floor(((e.clientY - r.top) / r.height) * img.naturalHeight);
+        if (x < 0 || y < 0 || x >= img.naturalWidth || y >= img.naturalHeight) continue;
+        const a = alphaOf(img);
+        if (a && a[(y * img.naturalWidth + x) * 4 + 3] > 127) return img;
+      }
+      return null;
+    };
+    const trackOf = (img) => img && tracks.find((t) => t.players.includes(img.dataset.player));
+    let hovered = null;
+    const hover = (img) => {
+      if (img === hovered) return;
+      if (hovered) delete hovered.dataset.hover;
+      hovered = img;
+      if (img) img.dataset.hover = "true";
+      stage.style.cursor = trackOf(img) ? "pointer" : "";
+    };
+    stage.addEventListener("pointermove", (e) => {
+      if (e.pointerType === "mouse") hover(playerAt(e));
+    });
+    stage.addEventListener("pointerleave", () => hover(null));
+    stage.addEventListener("click", (e) => {
+      const t = trackOf(playerAt(e));
+      if (t) toggle(t);
+    });
 
     playBtn.addEventListener("click", () => {
       if (playing) {
@@ -494,7 +532,6 @@
         root.querySelector(".mixer__tracks").hidden = true;
         root.querySelector(".mixer__builder").hidden = false;
         root.querySelector(".mixer__deck").hidden = false;
-        hotspots.forEach((h) => (h.hidden = false));
         root.dataset.ready = "true";
         render();
       })

@@ -334,11 +334,28 @@ that balance is the mix. The supplied tracks all peaked at almost exactly
 -0.9 dBFS, which suggests they were normalized one by one on export; if the
 balance sounds wrong, that's the place to look.
 
-**Overlays.** A player who should black out in the art when switched off
-needs a "player-off" image (the full illustration with just that player
-blacked out, nothing else changed) in `assets/img/mixer/orig/`; `mixer.py`
-cuts it down to a small transparent patch and prints the `<img>` line. Only
-the string bass has one so far.
+**The art.** `assets/img/orig/band-mixer.png` is the full band, exported
+from Ben's Photopea document (Oct 25, 2026). Each optional player has an "off"
+export in `assets/img/mixer/orig/<player>-off.png`: the same image with just
+that player grayed out by the document's adjustment layers. `mixer.py` keeps
+only the pixels that changed and crops to them, so each player's gray state is
+a small transparent patch over the one base image, and players toggle
+independently. Stacked, the patches reproduce Ben's own combination exports
+almost exactly: checked against two of them, about 160 pixels in 1.5 million
+differ, all where two players overlap. The Photopea set has 72 combinations;
+only these 8 images are needed.
+
+Each patch's alpha is also that player's exact shape, so `main.js` uses it as
+the hit map for tapping the art: clicking anywhere on a player switches their
+track, and hovering previews the change (a hint of gray, or of color).
+
+Known limits of this version: the microphones gray out with the guitar and
+the piano (in the exports they follow those players; they should be separate
+for vocals later), the mask edges are rough in places, and the PNG exports
+carry faint semi-transparent seams along the masks. The pipeline drops the
+alpha, which hides the seams; compositing them over the page background
+would show them as light lines. The trombone patch is there, but stays
+unused while the horns are one track that can't be switched off.
 
 Without JS (or Web Audio) the section is the art plus a plain list of the
 tracks as `<audio controls>`.

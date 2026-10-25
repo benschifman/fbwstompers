@@ -84,9 +84,9 @@ schema: band
        floor of the band); data-need finishes "A lineup needs at least …".
        Lineup rules as Ben specified, Oct 2026. Media is prepared by
        `python3 _source/mixer.py`, which also writes the waveforms and the
-       master level to mix.json — see that file. A player who should black
-       out in the art needs a .mixer__off overlay, and optionally a
-       .mixer__hotspot to make them tappable. Without JS, visitors get the art
+       master level to mix.json — see that file. A player who should gray
+       out in the art needs a .mixer__off overlay (mixer.py prints the line);
+       its shape is also what makes that player tappable. Without JS, visitors get the art
        and a plain list of the tracks. -->
   <section class="section section--paper" id="hear-the-difference">
     <div class="wrap">
@@ -104,12 +104,16 @@ schema: band
             <picture>
               <source type="image/webp" srcset="/assets/img/band-mixer-640.webp 640w, /assets/img/band-mixer-1024.webp 1024w" sizes="(min-width: 64rem) 560px, 100vw">
               <img src="/assets/img/band-mixer-1024.jpg"
-                   alt="Illustration of a 1920s-style jazz band in tuxedos: guitar, string bass, tuba, banjo, drums, piano, trumpet, clarinet, and trombone."
+                   alt="Illustration of a 1920s-style jazz band in tuxedos: guitar, string bass, tuba, banjo, drums, piano, trumpet, clarinet, and trombone, with two microphones on stands."
                    width="1024" height="683" loading="lazy" decoding="async">
             </picture>
-            <img class="mixer__off" data-player="bass" src="/assets/img/mixer/bass-off.webp" alt="" width="296" height="557" loading="lazy" decoding="async" style="left:16.21%;top:0.49%;width:19.27%">
-            <button class="mixer__hotspot" type="button" data-player="bass" tabindex="-1" aria-hidden="true" hidden
-                    style="--x:17.3%;--y:1.5%;--w:15.6%;--h:34.6%"></button>
+            <img class="mixer__off" data-player="guitar" src="/assets/img/mixer/guitar-off.webp" alt="" width="412" height="550" loading="lazy" decoding="async" style="left:0.39%;top:23.73%;width:26.82%">
+            <img class="mixer__off" data-player="bass" src="/assets/img/mixer/bass-off.webp" alt="" width="261" height="491" loading="lazy" decoding="async" style="left:17.64%;top:1.17%;width:16.99%">
+            <img class="mixer__off" data-player="tuba" src="/assets/img/mixer/tuba-off.webp" alt="" width="348" height="450" loading="lazy" decoding="async" style="left:31.12%;top:11.82%;width:22.66%">
+            <img class="mixer__off" data-player="banjo" src="/assets/img/mixer/banjo-off.webp" alt="" width="349" height="372" loading="lazy" decoding="async" style="left:48.57%;top:25.49%;width:22.72%">
+            <img class="mixer__off" data-player="drums" src="/assets/img/mixer/drums-off.webp" alt="" width="336" height="344" loading="lazy" decoding="async" style="left:63.15%;top:20.70%;width:21.88%">
+            <img class="mixer__off" data-player="piano" src="/assets/img/mixer/piano-off.webp" alt="" width="194" height="443" loading="lazy" decoding="async" style="left:84.64%;top:26.76%;width:12.63%">
+            <img class="mixer__off" data-player="trombone" src="/assets/img/mixer/trombone-off.webp" alt="" width="564" height="546" loading="lazy" decoding="async" style="left:60.09%;top:45.70%;width:36.72%">
           </div>
 
           <div class="mixer__deck" hidden>

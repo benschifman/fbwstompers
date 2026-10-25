@@ -970,21 +970,10 @@ a:hover { color: var(--gold-bright); }
 }
 .mixer__off[data-visible="true"] { opacity: 1; }
 
-.mixer__hotspot {
-  position: absolute;
-  left: var(--x);
-  top: var(--y);
-  width: var(--w);
-  height: var(--h);
-  padding: 0;
-  background: none;
-  border: 2px solid transparent;
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  transition: border-color var(--transition), background var(--transition);
-}
-.mixer__hotspot:hover { border-color: var(--gold); background: rgb(201 168 76 / 0.08); }
-.mixer__hotspot:disabled { cursor: default; border-color: transparent; background: none; }
+/* Hovering a player previews the change a click would make: a hint of
+   gray on a player who is on, a hint of color on one who is off. */
+.mixer__off[data-hover="true"] { opacity: 0.45; }
+.mixer__off[data-visible="true"][data-hover="true"] { opacity: 0.55; }
 
 .mixer__deck {
   display: flex;
